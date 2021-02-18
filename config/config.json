@@ -1,0 +1,37 @@
+{
+    "DEFAULT MAP NAMES": {
+        "LINKAGE FINAL MAP": "linkage_new",
+        "RIVER SEGMENTS MAP": "arc_segments",
+        "LINKAGE INTER RIVER SEGMENTS MAP": "output_inter_linkage_rivers",
+        "LINKAGE INTER DEMAND SITE MAP": "output_inter_linkage_demand_sites"
+    },
+
+    "PROCESSING LINES": {
+            "import_maps": "Importando archivo [{map_path}] con nombre [{output_name}]",
+            "set_origin_in_map": "Definiendo origen del mapa [{map_name}] a: x_ll=[{x_ll}], y_ll=[{y_ll}], z_rot=[{z_rot}]",
+            "setup_arcs": "Leyendo geometrías de Esquema WEAP",
+            "_inter_map_with_linkage": "Intersectando mapa [{map_name}] con linkage",
+            "get_catchments_from_map": "Validando cuencas encontradas en esquema WEAP con archivo de cuencas",
+            "get_gws_from_map": "Validando acuíferos encontrados en esquema WEAP con archivo de acuíferos",
+            "make_cell_data_by_main_map": "Procesando [{inter_map_geo_type}] de interseccion del mapa primario [{map_name}] con linkage",
+            "make_cell_data_by_secondary_maps": "Procesando [{inter_map_geo_type}] de interseccion del mapa secundario [{map_name}] con linkage",
+            "make_segment_map": "Calculando y almacenando divisiones en ríos",
+            "init_linkage_file": "Formateando estructura de archivo linkage",
+            "mark_linkage_active": "Guardando datos en archivo linkage",
+            "export_to_shapefile": "Exportando linkage a [{output_path}]",
+            "check_basic_columns": "Validando columnas necesarias para [{map_name}]: {columns}",
+            "check_names_with_geo": "Validando mapas con geometrías de nodos y arcos",
+            "check_names_between_maps": "Validando nombres de geometrias entre mapas",
+            "get_ds_map_from_node_map": "Generando mapa principal a partir de mapa de nodos",
+            "_read_well_files": "Leyendo el archivo [{well_path}] para identificar los pozos del mapa de Nodos."
+        },
+
+    "FEATURE NAMES": {
+        "groundwater": "groundwater",
+        "catchment": "catchment",
+        "demand sites": "demand_site",
+        "river": "river",
+        "geometry": "geo",
+        "main program": "main"
+    }
+}
