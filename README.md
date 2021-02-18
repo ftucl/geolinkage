@@ -1,4 +1,4 @@
-# geolinkage
+# GeoLinkage
 
 ## Help
 - Grass Console: (or  *File -> Launch Script*)
