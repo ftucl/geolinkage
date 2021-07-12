@@ -1,7 +1,6 @@
 import ui
-import re
 
-import Utils
+from Utils import UtilMisc
 from Config import ConfigApp
 
 
@@ -54,7 +53,7 @@ class ErrorManager:
                     _err = _err or self.check_warning(typ=typ, code=code)
                 return _err
             else:
-                return self.check_warning(types=list(self._warnings_meta.keys()))  # all errors
+                return self.check_warning(types=list(self._warnings_meta.keys()), code=code)  # all errors
         else:
             if typ:
                 if typ in self._warnings:
@@ -137,15 +136,21 @@ class ErrorManager:
                 else:
                     self._errors_meta['other'][code] = [msg]
 
-    def get_errors(self, typ: str = '', types: list = None, code: str = ''):
+    def get_errors(self, typ: str = None, types: list = None, code: str = ''):
         effect = 'ui.bold ui.red'
         normal = 'ui.ui.faint ui.white'
 
         if code:
             errors = []
-            if typ in self._errors_meta and code in self._errors_meta[typ]:
-                for _err in self._errors_meta[typ][code]:
-                    errors.append(_err)
+            if typ:
+                if typ in self._errors_meta and code in self._errors_meta[typ]:
+                    for _err in self._errors_meta[typ][code]:
+                        errors.append(_err)
+            elif types:
+                for typ in types:
+                    errors = self.get_errors(typ=typ, code=code)
+            else:
+                errors = self.get_errors(types=list(self._errors.keys()), code=code)
         else:
             if typ:
                 if typ in self._errors:
@@ -170,6 +175,11 @@ class ErrorManager:
             if typ in self._warnings_meta and code in self._warnings_meta[typ]:
                 for _err in self._warnings_meta[typ][code]:
                     errors.append(_err)
+            elif types:
+                for typ in types:
+                    errors = self.get_warnings(typ=typ, code=code)
+            else:
+                errors = self.get_warnings(types=list(self._errors.keys()), code=code)
         else:
             if typ:
                 if typ in self._warnings:
@@ -217,7 +227,7 @@ class ErrorManager:
                 errors = self.get_warnings(types=list(self._errors.keys()))
 
             for ind, err in enumerate(errors):
-                err_ui_list = Utils.insert_ui(err)
+                err_ui_list = UtilMisc.insert_ui(err)
                 ui.info(ui.tabs(1), '[WARNING {}] '.format(ind + 1), *err_ui_list)
         else:
             if typ:
@@ -228,6 +238,6 @@ class ErrorManager:
                 errors = self.get_errors(types=list(self._errors.keys()))
 
             for ind, err in enumerate(errors):
-                err_ui_list = Utils.insert_ui(err)
+                err_ui_list = UtilMisc.insert_ui(err)
                 ui.info(ui.tabs(1), '[ERROR {}] '.format(ind + 1), *err_ui_list)
 

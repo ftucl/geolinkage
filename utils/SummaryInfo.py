@@ -1,11 +1,45 @@
 import ui
 
-import Utils
-from Config import ConfigApp
-from Errors import ErrorManager
+from Utils import UtilMisc
+from utils.Config import ConfigApp
+from utils.Errors import ErrorManager
 
 
 class SummaryInfo:
+    """
+        Clase utilitaria cuyo proposito es mostrar los resultados finales de la ejecucion del nucleo de procesamiento.
+        Dividiendo la informacion en: parametros de entrada, estado de las principales tareas en el procesamiento y
+        los errores / advertencias que fueron detectadas en la ejecucion.
+
+        Para mayor flexibilidad el nucleo principal y los procesadores de las caracteristicas trabajan con una instancia
+        independiente de esta clase.
+
+        * Archivo de Configuracion './config/config.json'.
+
+
+        Attributes:
+        ----------
+        prefix : str
+            Prefijo usado en los titulos de los resumenes. Por defecto, toma el valor dependiendo de la caracteristica
+            a procesa basado en el archivo de configuracion: self.config.type_names[self.__class__.__name__].
+            (Example: [PREFIX] ERRORS SUMMARY)
+
+        config : ConfigApp
+            Acceso a la instancia de configuracion del objeto (procesador) del que forma parte este summary.
+
+        input_params : Dict[str, str | int | bool]
+            Almacena los parametros de entrada desde la interfaz del usuario y las estadisticas basicas del resultado
+            de la generacion del archivo de acople.
+
+        process_lines : List[Dict[str<line>, str<status>]]
+            Lista que almacena las principales tareas realizadas durante el procesamiento y su estado de exito o fracaso.
+            (Estas tareas y sus mensajes se encuentran en el archivo de configuracion, en el item: 'PROCESSING LINES').
+
+        errors : ErrorManager
+            Acceso a la instancia de los errores/advertencias del objeto (procesador) del que forma parte este summary.
+
+
+        """
 
     def __init__(self, prefix, errors: ErrorManager, config: ConfigApp):
         self.prefix = prefix
@@ -62,13 +96,13 @@ class SummaryInfo:
         if with_ui:
             process_lines = []
             for line_number, line in enumerate(self.process_lines):
-                msg_info = Utils.insert_ui(text=line['line'], highlight_color=ui.darkred)
+                msg_info = UtilMisc.insert_ui(text=line['line'], highlight_color=ui.darkred)
 
                 status = '[{}]'.format(line['status'])
                 if line['status'] == 'OK':
-                    msg_status = Utils.insert_ui(text=status, highlight_color=ui.green)
+                    msg_status = UtilMisc.insert_ui(text=status, highlight_color=ui.green)
                 else:
-                    msg_status = Utils.insert_ui(text=status, highlight_color=ui.red)
+                    msg_status = UtilMisc.insert_ui(text=status, highlight_color=ui.red)
 
                 newline = {
                     'line': msg_info,
@@ -114,21 +148,21 @@ class SummaryInfo:
 
         return warnings_str
 
-    def append_error(self, msg: str = None, msgs: list = None, typ: str = None, is_warn: bool = False, code: str = ''):
-        typ = self.prefix if not typ else typ
-
-        if is_warn:
-            if msg:
-                self.errors.append(msg=msg, typ=typ, is_warn=is_warn, code=code)
-            elif msgs:
-                for msg_str in msgs:
-                    self.errors.append(msg=msg_str, typ=typ, is_warn=is_warn, code=code)
-        else:
-            if msg:
-                self.errors.append(msg=msg, typ=typ, code=code)
-            elif msgs:
-                for msg_str in msgs:
-                    self.errors.append(msg=msg_str, typ=typ, code=code)
+    # def append_error(self, msg: str = None, msgs: list = None, typ: str = None, is_warn: bool = False, code: str = ''):
+    #     typ = self.prefix if not typ else typ
+    #
+    #     if is_warn:
+    #         if msg:
+    #             self.errors.append(msg=msg, typ=typ, is_warn=is_warn, code=code)
+    #         elif msgs:
+    #             for msg_str in msgs:
+    #                 self.errors.append(msg=msg_str, typ=typ, is_warn=is_warn, code=code)
+    #     else:
+    #         if msg:
+    #             self.errors.append(msg=msg, typ=typ, code=code)
+    #         elif msgs:
+    #             for msg_str in msgs:
+    #                 self.errors.append(msg=msg_str, typ=typ, code=code)
 
     def get_title(self):
         return self.prefix.upper()

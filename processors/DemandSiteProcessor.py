@@ -1,25 +1,150 @@
 import time
-from subprocess import PIPE
-
-import ui
-from grass_session import Session
-
-import Utils
-from Config import ConfigApp
-from Errors import ErrorManager
-from FeatureProcess import FeatureProcess
-from GeoKernel import GeoKernel
-
-from grass.pygrass.vector import Vector, VectorTopo
-from grass.pygrass.modules import Module
-from grass.pygrass.utils import copy, remove
-
 from collections import namedtuple
 
-from decorator import main_task, TimerSummary
+from grass.pygrass.vector import VectorTopo
+
+from utils.Utils import GrassCoreAPI, TimerSummary
+from utils.Config import ConfigApp
+from utils.Errors import ErrorManager
+from FeatureProcessor import FeatureProcess
+from GeoKernel import GeoKernel
 
 
 class DemandSiteProcess(FeatureProcess):
+    """
+        It contains the DS processor particular logic.
+
+        Processes well-type demand sites generating a vector map from surface maps (node map and arc map),
+        being this the main map. A plain text file identifies by name which demand sites are actually
+        wells on the surface map.
+
+        Any other demand site will be treated as a demand area and can be specified by a secondary map that correctly
+        indicates its boundaries. The secondary maps are created from the ESRI Shapefiles located inside the folder
+        indicated in input parameters.
+
+        By default, 4 columns are generated in final file metadata, being able to have a maximum of 4 wells
+        per cell (this number can be changed in the configuration file).
+
+        For secondary maps, a column will be generated for each map found. The name of this column is obtained from
+        first 10 characters of the file name (shapefile name).
+        These columns are only informative for the link between models.
+
+
+        Attributes:
+        ----------
+        cells : Dict[namedtuple<Cell>, Dict[str, Dict[str, str|int]]
+            Inherited from FeatureProcess class.
+            It is used to store cell-feature relationship. It is indexed by DS grid cells that
+            they have been intersected with the feature map. Because a cell can be intersected by more than one
+            map geometry, access is given by: [cell] -> [geo_intersected] -> [cell_feature_relationship_data].
+            The stored values are:
+                - 'area': area occupied by geometry on the map.
+                - 'cell_id': cell ID. (ID in gw vector map grid)
+                - 'name': DS name.
+                - 'map_name': DS map name. (name used by GRASS Platform)
+
+        cell_ids: Dict[namedtuple<Cell>, Dict[str, str|int|List<data>]]
+            Inherited from FeatureProcess class.
+            Store for each cell the geometry (s) that will actually be stored in final file. Structure and stored
+            values details are in FeatureProcess class.
+
+        demand_sites : Dict[int, Dict[str, str | int]]
+            It is used to store DS information obtained from surface map analysis.
+            (Stored data details are in GeoKernel class)
+
+        _demand_site_names : Dict[str, int]
+            It is used internally to directly access DS data by name.
+
+        wells : Dict[str, Dict[str, str | int | bool]]
+            Stores wells that come from the plain text file.
+            The stored values are:
+                - 'name': well name.
+                - 'path': well file path.
+                - 'type': not used.
+                - 'is_well': Identify whether or not it is a well (common). Currently, it is always True.
+                - 'processed': Identifies if it was found in surface maps. (True | False).
+
+
+        Methods:
+        -------
+        _start(self, linkage_name: str)
+            Runs procedure for successful processing between feature map and inital GW grid.
+            The 'linkage_name' parameter refers to GW grid vector map.
+
+        run(self, linkage_name: str):
+            Start processing and records basic statistics of the execution.
+            The 'linkage_name' parameter refers to groundwater grid vector map.
+
+        set_data_from_geo(self):
+            Extracts demand sites data from geometries analyzed of the surface scheme.
+
+        make_cell_data_by_main_map(self, map_name, inter_map_name, inter_map_geo_type)
+            Creates structure that store the necessary well data from main map.
+            The main map generates 4 (default value en config file) mandatory columns in final file (metadata)
+            for the demand sites (even if their values are null).
+
+        make_cell_data_by_secondary_maps(self, map_name, inter_map_name, inter_map_geo_type)
+            Creates structure that store the necessary data of demand sites areas from secondary maps.
+            A column be generated for each map found. The column name is get from the first 10 characters of
+            the file name.
+
+        get_ds_map_from_node_map(self, is_main_file: bool = False, verbose: bool = False, quiet: bool = True)
+            Creates a vector map from demand site nodes registered in the surface map.
+            The 'is_main_file' parameter determines whether you leave it as main map (mandatory column) or
+            secondary map (informative column).
+
+        read_well_files(self)
+            Reads the plain text file with well names and stores them.
+
+        _read_well_files(self, well_name, well_path, well_lines)
+            Validate that the wells read exist in surface map (node) or report their absence.
+
+
+
+        Example:
+        --------
+        >>> from processors.GeoKernel import GeoKernel
+        >>> from processors.DemandSiteProcessor import DemandSiteProcess
+        >>> from utils.Config import ConfigApp
+        >>> from utils.Errors import ErrorManager
+
+        >>> epsg_code, gisdb, location, mapset = 30719, '/tmp', 'test', 'PERMANENT'
+        >>> main_map_file, well_file = '/tmp/arc_map.shp', '/tmp/well_file.txt'
+        >>> ds_area1_map_file, ds_area2_map_file = '/tmp/ds1_map.shp', '/tmp/ds2_map.shp'
+        >>> grid_vector_map = 'initial_gw_grid'
+
+        >>> config = ConfigApp(epsg_code=epsg_code, gisdb=gisdb, location=location, mapset=mapset)
+        >>> error = ErrorManager(config=config)
+        >>> geo = GeoKernel(config=config, err=error)
+
+        >>> processor = DemandSiteProcess(geo=geo, config=config, err=error)
+        >>> processor.config.set_columns_to_save(processor.get_feature_type(), columns_to_save=4)
+        >>> processor.config.set_order_criteria(processor.get_feature_type(), order_criteria='area')
+        >>> processor.set_map_name(map_name='arc_vector_map', map_path=main_map_file, is_main_file=True)
+        >>> processor.set_map_name(map_name='ds1_vector_map', map_path=ds_area1_map_file, is_main_file=False)
+        >>> processor.set_map_name(map_name='ds2_vector_map', map_path=ds_area2_map_file, is_main_file=False)
+        >>> processor.set_well(well_name='wells', well_path=well_file)
+
+        >>> processor.import_maps()
+        >>> processor.check_names_with_geo()
+        >>> processor.check_names_between_maps()
+        >>> processor.get_ds_map_from_node_map(is_main_file=True)
+        >>> processor.read_well_files()
+
+        >>> if not processor.check_errors():  # or processor.run(linkage_name=grid_vector_map)
+        >>>     processor.inter_map_with_linkage(linkage_name=grid_vector_map)
+        >>>     processor.make_grid_cell()
+
+        >>>     summary = processor.get_summary()
+
+        >>>     inputs = summary.print_input_params()  # inputs and stats
+        >>>     real_lines = summary.get_process_lines(with_ui=True)
+        >>>     errors = summary.print_errors()
+        >>>     warnings = summary.print_warnings()
+
+        >>>     print(inputs)
+
+    """
 
     def __init__(self, geo: GeoKernel = None, config: ConfigApp = None, debug: bool = False, err: ErrorManager = None):
         super().__init__(geo=geo, config=config, debug=debug, err=err)
@@ -28,17 +153,12 @@ class DemandSiteProcess(FeatureProcess):
         self.wells = {}  # [well_name] = {'name': '', 'path': '', 'type': '', 'is_well':(T|F), 'processed': (T|F)}
         self._demand_site_names = None
 
-        self._feature_opts = {
-            'order_criteria': 'area',
-            'columns_to_save': 4
-        }
-
     def _start(self, linkage_name: str):
         # import files to vector maps
         self.import_maps()
 
         # check ds maps with geo maps (nodes and arcs)
-        self.check_names_with_geo()
+        # self.check_names_with_geo()
 
         # check ds geometries
         self.check_names_between_maps()
@@ -48,7 +168,7 @@ class DemandSiteProcess(FeatureProcess):
 
         self.read_well_files()  # read TXT with the wells (all will be considered wells if not)
 
-        if not self.check_errors():
+        if not self.check_errors(types=[self.get_feature_type()]):
             # intersection between C (gw map) and L (linkage map)
             _err_gw, _errors_gw = self.inter_map_with_linkage(linkage_name=linkage_name,
                                                               snap='1e-12')
@@ -76,7 +196,7 @@ class DemandSiteProcess(FeatureProcess):
 
         # Set inputs into summary
         # # set main field in map
-        field = self.config.get_config_field_name(feature_type=self.get_feature_type(), name='name')
+        field = self.config.get_config_field_name(feature_type=self.get_feature_type(), field_type='main')
         self.summary.set_input_param(param_name='FIELD NAME', param_value='[{}]'.format(field))
 
         # # imported file
@@ -131,23 +251,6 @@ class DemandSiteProcess(FeatureProcess):
             demand_site_data = self.demand_sites[point_id]
             self._demand_site_names[demand_site_data['name']] = point_id
 
-    @classmethod
-    def make_buffer_in_point(cls, map_pts_name, out_name, map_type='point', distance=1000, verbose: bool = False, quiet: bool = True):
-        buffer = Module('v.buffer', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose, quiet=quiet)
-
-        buffer.inputs.input = map_pts_name
-        buffer.inputs.type = map_type
-        buffer.inputs.distance = distance
-
-        buffer.outputs.output = out_name
-
-        buffer.flags.t = True
-        buffer.flags.s = True
-
-        # print(buffer.get_bash())
-        buffer.run()
-        print(buffer.outputs["stdout"].value)
-
     # @main_task
     def get_ds_map_from_node_map(self, is_main_file: bool = False, verbose: bool = False, quiet: bool = True):
         import sqlite3
@@ -159,18 +262,19 @@ class DemandSiteProcess(FeatureProcess):
 
         # extract nodes for DS
         col_query, op_query, val_query = self.geo.get_node_needed_field_names()['secondary']['name'], '=', '1'
-        _err, _errors = Utils.extract_map_with_condition(map_name=node_map_name, output_name=ds_extract_out_name,
-                                                         col_query=col_query, val_query=val_query,
-                                                         op_query=op_query, geo_check='point',
-                                                         verbose=verbose, quiet=quiet)
+        _err, _errors = GrassCoreAPI.extract_map_with_condition(map_name=node_map_name,
+                                                                output_name=ds_extract_out_name,
+                                                                col_query=col_query, val_query=val_query,
+                                                                op_query=op_query, geo_check='point',
+                                                                verbose=verbose, quiet=quiet)
         if not _err:
             # make a buffer in each node founded
-            self.make_buffer_in_point(map_pts_name=ds_extract_out_name, out_name=ds_buffer_out_name,
-                                      map_type='point', distance=10, verbose=verbose, quiet=quiet)
+            GrassCoreAPI.make_buffer_in_point(map_pts_name=ds_extract_out_name, out_name=ds_buffer_out_name,
+                                              map_type='point', distance=10, verbose=verbose, quiet=quiet)
 
             # change the column name from Node map's main field to DS map's main field
             node_main_field = self.geo.get_node_needed_field_names()['main']['name']
-            ds_main_field = self.get_needed_field_names()['main']['name']
+            ds_main_field = self.get_needed_field_names(alias=self.get_feature_type())['main']['name']
 
             vector_map = VectorTopo(ds_buffer_out_name)
             vector_map.open('r')
@@ -192,80 +296,10 @@ class DemandSiteProcess(FeatureProcess):
             msg_error = 'No se han encontrado [Sitios de Demanda] en el [mapa de nodos].'
             self.append_error(msg=msg_error, typ=self.get_feature_type(), is_warn=True)
 
-        self.summary.set_process_line(msg_name='get_ds_map_from_node_map', check_error=self.check_errors())
+        self.summary.set_process_line(msg_name='get_ds_map_from_node_map', check_error=self.check_errors(types=[self.get_feature_type()]))
 
-        return self.check_errors(), self.get_errors()
+        return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 
-    # @main_task
-    # def _inter_map_with_linkage(self, map_name, linkage_name, output_name, snap='1e-12', verbose: bool = False, quiet: bool = True):
-    #     ds_copy_out_name = 'ds_copy'
-    #     ds_extract_out_name = 'ds_extract'
-    #     ds_buffer_out_name = 'ds_points_with_buffer'
-    #
-    #     # get a copy from map
-    #     copy(map_name, ds_copy_out_name, 'vect', overwrite=True)
-    #
-    #     err = False
-    #     vector_map = Vector(ds_copy_out_name)
-    #     if vector_map.exist():  # copy works
-    #         # extract only [TypeID]=1 in WEAPNode map
-    #         extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose, quiet=quiet)
-    #         extract.inputs.input = ds_copy_out_name
-    #         extract.outputs.output = ds_extract_out_name
-    #
-    #         extract.inputs.where = "TypeID=\'{}\'".format(1)
-    #         extract.inputs.type = 'point'
-    #         # print(extract.get_bash())
-    #         extract.run()
-    #         # print(extract.outputs["stdout"].value)
-    #         # print(extract.outputs["stderr"].value)
-    #
-    #         vector_map = VectorTopo(ds_extract_out_name)
-    #         vector_map.open('r')
-    #         if vector_map.exist() and vector_map.num_primitive_of('point') > 0:  # extract works
-    #             # make a buffer by each point
-    #             DemandSiteProcess.make_buffer_in_point(ds_extract_out_name, ds_buffer_out_name, map_type='point', distance=10)
-    #
-    #             vector_map.close()
-    #             vector_map = Vector(ds_buffer_out_name)
-    #             if vector_map.exist():  # buffer works
-    #                 # intersect vector maps
-    #                 overlay = Module('v.overlay', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose, quiet=quiet)
-    #                 overlay.flags.c = True
-    #
-    #                 overlay.inputs.ainput = ds_buffer_out_name
-    #                 overlay.inputs.binput = linkage_name
-    #                 overlay.inputs.operator = 'and'
-    #                 overlay.inputs.snap = snap
-    #                 overlay.outputs.output = output_name
-    #
-    #                 # print(overlay.get_bash())
-    #                 overlay.run()
-    #                 # print(overlay.outputs["stdout"].value)
-    #                 # print(overlay.outputs["stderr"].value)
-    #
-    #                 vector_map.close()
-    #                 vector_map = Vector(output_name)
-    #                 err = False if vector_map.exist() else True
-    #             else:
-    #                 msg_error = 'El mapa [{}] presenta errores o no pudo ser creado por funcion [{}].'.format(
-    #                     ds_buffer_out_name, 'v.buffer')
-    #                 self.append_error(msg=msg_error)
-    #
-    #                 err = True
-    #         else:
-    #             vector_map.close()
-    #             msg_error = 'No se encontraron [sitios de demanda] en [WEAPNode].'
-    #             self.append_error(msg=msg_error)
-    #
-    #             err = True
-    #     else:
-    #         msg_error = 'El mapa [{}] no pudo ser creado por funcion [{}].'.format(ds_copy_out_name, 'v.copy')
-    #         self.append_error(msg=msg_error)
-    #
-    #         err = True
-    #
-    #     return self.check_errors(), self.get_errors()
     # @main_task
     def make_cell_data_by_main_map(self, map_name, inter_map_name, inter_map_geo_type):
         inter_map = VectorTopo(inter_map_name)
@@ -279,7 +313,7 @@ class DemandSiteProcess(FeatureProcess):
             # cell, feature_name, data = self._make_cell_data(feature_data=a, map_name=map_name)
             Cell = namedtuple('Cell_ds', ['row', 'col'])
 
-            fields = self.get_needed_field_names()
+            fields = self.get_needed_field_names(alias=self.get_feature_type())
             main_field, main_needed = fields['main']['name'], fields['main']['needed']
             field_feature_name = 'a_' + main_field
             col_field = 'b_' + self.config.fields_db['linkage']['col_in']
@@ -315,11 +349,11 @@ class DemandSiteProcess(FeatureProcess):
 
         inter_map.close()
 
-        self.summary.set_process_line(msg_name='make_cell_data_by_main_map', check_error=self.check_errors(),
+        self.summary.set_process_line(msg_name='make_cell_data_by_main_map', check_error=self.check_errors(types=[self.get_feature_type()]),
                                       map_name=map_name, inter_map_name=inter_map_name,
                                       inter_map_geo_type=inter_map_geo_type)
 
-        return self.check_errors(), self.get_errors()
+        return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 
     # @main_task
     def make_cell_data_by_secondary_maps(self, map_name, inter_map_name, inter_map_geo_type):
@@ -334,7 +368,7 @@ class DemandSiteProcess(FeatureProcess):
             # cell, feature_name, data = self._make_cell_data(feature_data=a, map_name=map_name)
             Cell = namedtuple('Cell_ds', ['row', 'col'])
 
-            fields = self.get_needed_field_names()
+            fields = self.get_needed_field_names(alias=self.get_feature_type())
             main_field, main_needed = fields['main']['name'], fields['main']['needed']
             field_feature_name = 'a_' + main_field
             col_field = 'b_' + self.config.fields_db['linkage']['col_in']
@@ -364,77 +398,11 @@ class DemandSiteProcess(FeatureProcess):
 
         inter_map.close()
 
-        self.summary.set_process_line(msg_name='make_cell_data_by_secondary_maps', check_error=self.check_errors(),
+        self.summary.set_process_line(msg_name='make_cell_data_by_secondary_maps', check_error=self.check_errors(types=[self.get_feature_type()]),
                                       map_name=map_name, inter_map_name=inter_map_name,
                                       inter_map_geo_type=inter_map_geo_type)
 
-        return self.check_errors(), self.get_errors()
-
-    # @main_task
-    # def make_grid_cell(self, map_name: str):
-    #     # get the intersection map name
-    #     inter_map_name = self.get_inter_map_name(map_key=map_name)
-    #
-    #     inter_map = VectorTopo(inter_map_name)
-    #     inter_map.open('r')
-    #
-    #     col_field = 'b_' + self.config.fields_db['linkage']['col_in']
-    #     row_field = 'b_' + self.config.fields_db['linkage']['row_in']
-    #     Cell = namedtuple('Cell_ds', ['row', 'col'])
-    #     for a in inter_map.viter('areas'):
-    #         if a.cat is None:
-    #             # print("[ERROR] ", a.cat, a.id)
-    #             continue
-    #
-    #         area_name = a.attrs['a_Name']
-    #
-    #         cell_area_id = a.attrs['b_cat']  # id from cell in linkage map
-    #         area_row, area_col = a.attrs[row_field], a.attrs[col_field]
-    #         area_area = a.area()
-    #
-    #         feature_id = a.attrs['a_ObjID']  # id from demand site map (WEAPNode) and its geometry id
-    #         is_geometry_processed = self.demand_sites[feature_id]['processed']
-    #         if not is_geometry_processed:
-    #             data = {
-    #                 'area': area_area,
-    #                 'cell_id': cell_area_id,
-    #                 'name': area_name
-    #             }
-    #
-    #             cell = Cell(area_row, area_col)
-    #             self._set_cell(map_name, cell, area_name, data, by_field='area')
-    #
-    #             self.demand_sites[feature_id]['processed'] = True
-    #
-    #     for cell in self.cells:
-    #         area_targets = self.cells[cell]
-    #         key_target = list(area_targets.keys())[0]  # get any item is the same
-    #
-    #         cell_id = area_targets[key_target]['cell_id']
-    #
-    #         self.cell_ids[cell] = {
-    #             'number_demand_sites': len(area_targets.keys()),
-    #             'cell_id': cell_id,
-    #             'row': cell.row,
-    #             'col': cell.col,
-    #             'demand_sites': area_targets
-    #         }
-    #
-    #     inter_map.close()
-    #
-    #     return self.check_errors(), self.get_errors()
-
-    def get_needed_field_names(self):
-        fields = {
-            'main': {
-                'name': self.config.fields_db[self.get_feature_type()]['name'],
-                'needed': True
-            },
-            'secondary': '',
-            'limit': '',
-        }
-
-        return fields
+        return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 
     def read_well_files(self):
         if self.exist_files_with_wells():
@@ -481,21 +449,10 @@ class DemandSiteProcess(FeatureProcess):
 
         return self.check_errors(code='12'), self.get_errors(code='12')
 
+    def set_map_names(self):
+        # demand site area maps
+        super().set_map_names()
 
-    # def check_basic_columns(self, map_name: str):
-    #     _err, _errors = False, []
-    #     fields = self.get_needed_field_names()
-    #
-    #     for field_key in [field for field in fields if fields[field]]:
-    #         field_name = fields[field_key]['name']
-    #         needed = fields[field_key]['needed']
-    #
-    #         __err, __errors = Utils.check_basic_columns(map_name=map_name, columns=[field_name], needed=[needed])
-    #
-    #         _errors += __errors
-    #         if needed:
-    #             _err |= __err
-    #
-    #     self.append_error(msgs=_errors, typ='other')
-    #
-    #     return _err, _errors
+        # demand site wells
+        for well_name, well_path in self.get_demand_site_well_paths():
+            self.set_well(well_name=well_name, well_path=well_path)

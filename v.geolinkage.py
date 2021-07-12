@@ -164,21 +164,17 @@
 
 import os
 import atexit
-import sys
-
 import ui
 
-from grass_session import TmpSession, Session
-
+from grass_session import Session
 from grass.exceptions import CalledModuleError
 from grass.script.utils import try_rmdir
-
 import grass.script as grass
 
-import Utils
+from utils.Utils import UtilMisc
 from AppKernel import AppKernel
 from InterfaceApp import InterfaceApp
-from SummaryInfo import SummaryInfo
+from utils.SummaryInfo import SummaryInfo
 
 
 def print_summary(summary: SummaryInfo):
@@ -225,6 +221,112 @@ def print_summary(summary: SummaryInfo):
 
 
 class GrassInterface(InterfaceApp):
+    """
+        It takes care of everything related to the input parameters, GRASS session generation used by the processing
+        engine and displays execution results in the user's GRASS console.
+
+        * Config file: ./config/config.json
+
+
+        Attributes:
+        ----------
+        _config_opts : Dict[str, Dict | str]
+            Class attribute that stores the input keywords and their meaning. This value is obtained from the
+            configuration file.
+
+
+        Methods:
+        -------
+        run(self)
+            (Inherited from InterfaceApp) Executes the features processing engine with input parameters and options.
+
+        check_args(self)
+            (Inherited from InterfaceApp) Method not implemented because the parameters are collected automatically
+            using the command 'grass.script.parse()'.
+
+        print_catchment_summary(self)
+            (Inherited from InterfaceApp) Prints the catchment processor execution results.
+
+        print_gw_summary(self)
+            (Inherited from InterfaceApp) Prints the groundwater processor execution results.
+
+        print_ds_summary(self)
+            (Inherited from InterfaceApp) Prints the demand site processor execution results.
+
+        print_river_summary(self)
+            (Inherited from InterfaceApp) Prints the river processor execution results.
+
+        print_main_summary(self)
+            (Inherited from InterfaceApp) Prints the application execution general results.
+
+        print_input_summary(self)
+            (Inherited from InterfaceApp) Prints the input parameters that the user entered.
+
+        print_errors(self)
+            (Inherited from InterfaceApp) Prints errors that happen when processing input parameters or some
+            other error related to the user interface.
+
+
+        Examples:
+        --------
+        >>> from AppKernel import AppKernel
+        >>> from grass import script as gs
+
+        >>> grass_vars = gs.parse_command("g.gisenv", flags="s")
+        >>> gisdb, location, mapset = grass_vars["GISDBASE"], grass_vars["LOCATION"], grass_vars["MAPSET"]
+        >>> app = AppKernel(gisdb=gisdb, location=location, mapset=mapset)
+        >>> interface_app = GrassInterface(app=app, _gisdb=gisdb, _location=location, _mapset=mapset)
+
+        >>> # get input parameters
+        >>> options, flags = grass.parser()
+        >>> linkage_in_file = options['linkage_in']
+        >>> linkage_out_folder = options['linkage_out_folder']
+        >>> node_file = options['node']
+        >>> arc_file = options['arc']
+        >>> catchment_file = options['catchment']
+        >>> gw_file = options['gw']
+        >>> ds_folder = options['ds_folder']
+        >>> catchment_field = options['catchment_field']
+        >>> gw_field = options['gw_field']
+        >>> ds_field = options['ds_field']
+        >>> epsg_in=options['epsg_code']
+
+        >>> if flags['g']:  # make linkage grid using MODFLOW model and flopy
+        >>>     interface_app.set_gw_model_coords_lower_left(coords_ll=options['coords_ll'])  # (x_ll, y_ll) in gw model
+        >>>     interface_app.set_z_rotation(z_rotation=options['zrotation'])
+
+        >>>     if interface_app.x_ll is not None and interface_app.y_ll is not None and interface_app.z_rotation is not None:
+        >>>         app.set_origin(x_ll=interface_app.x_ll, y_ll=interface_app.y_ll, z_rotation=interface_app.z_rotation)
+
+        >>>         interface_app.set_linkage_in_folder(linkage_in_folder=options['linkage_in_folder'])
+        >>>         interface_app.set_gw_model(gw_model_file=options['gw_model'])
+
+        >>>         # make grid with flopy
+        >>>         interface_app.get_linkage_grid_by_model()
+        >>>         linkage_in_file = interface_app.linkage_in_file
+
+        >>> interface_app.set_feature_fields(catchment_field=catchment_field, gw_field=gw_field, ds_field=ds_field)
+        >>> interface_app.set_required_paths(linkage_in_file=linkage_in_file, linkage_out_folder=linkage_out_folder,
+        >>>                                      node_file=node_file, arc_file=arc_file)
+        >>> interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder)
+
+        >>> if not interface_app.check_errors():
+        >>>     app.set_epsg(epsg_code=epsg_in)
+        >>>     interface_app.run()
+
+        >>>     interface_app.print_input_summary()
+        >>>     interface_app.print_main_summary()
+        >>>     interface_app.print_catchment_summary()
+        >>>     interface_app.print_gw_summary()
+        >>>     interface_app.print_ds_summary()
+        >>>     interface_app.print_river_summary()
+
+
+        TODO:
+        ----
+            - Make sessions into processors
+        """
+
     def __init__(self, app: AppKernel = None, _location: str = None, _mapset: str = None):
         super().__init__(app=app, _location=_location, _mapset=_mapset)
 
@@ -246,6 +348,10 @@ class GrassInterface(InterfaceApp):
 
     def print_main_summary(self):
         summary = self.app.get_main_summary()
+        print_summary(summary)
+
+    def print_geo_summary(self):
+        summary = self.app.get_geo_summary()
         print_summary(summary)
 
     def print_errors(self):
@@ -344,10 +450,10 @@ def main(location: str):
             grass.fatal(msg_error)
 
         # check if paths exist
-        exist_files, exist_folders = Utils.check_paths_exist(folders=[linkage_in_folder], files=[gw_model_file])
+        exist_files, exist_folders = UtilMisc.check_paths_exist(folders=[linkage_in_folder], files=[gw_model_file])
         if exist_folders[0][0] and exist_files[0][0]:
             interface_app.set_linkage_in_folder(linkage_in_folder=options['linkage_in_folder'])
-            interface_app.set_gw_model(gw_model=options['gw_model'])
+            interface_app.set_gw_model(gw_model_file=options['gw_model'])
 
             linkage_in_file = os.path.join(linkage_in_folder, linkage_in_name_default)
 
@@ -397,6 +503,7 @@ def main(location: str):
 
         interface_app.print_input_summary()
         interface_app.print_main_summary()
+        interface_app.print_geo_summary()
         interface_app.print_catchment_summary()
         interface_app.print_gw_summary()
         interface_app.print_ds_summary()

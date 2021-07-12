@@ -1,6 +1,6 @@
 from grass.pygrass.modules import MultiModule, ParallelModuleQueue
 
-from Config import ConfigApp
+from utils.Config import ConfigApp
 
 
 class ProcessKernel:

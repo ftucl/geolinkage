@@ -1,33 +1,115 @@
-import threading
 import time
-
-import ui
-from grass_session import Session
-
-import Utils
-from Config import ConfigApp
-from Errors import ErrorManager
-from FeatureProcess import FeatureProcess
-from GeoKernel import GeoKernel
-from decorator import main_task, TimerSummary
+from collections import namedtuple
 
 from grass.pygrass.vector import VectorTopo
 
-from collections import namedtuple
+from utils.Config import ConfigApp
+from utils.Errors import ErrorManager
+from FeatureProcessor import FeatureProcess
+from GeoKernel import GeoKernel
+from utils.Utils import TimerSummary
 
 
 class CatchmentProcess(FeatureProcess):
+    """
+        Processes vector map associated with the catchment ESRI Shapefile file (.shp) and contains geometries (areas)
+        associated with this feature.
+
+        It contains the catchment processor particular logic.
+
+        * Config File: ./config/config.json
+
+
+        Attributes:
+        ----------
+        cells : Dict[namedtuple<Cell>, Dict[str, Dict[str, str|int]]
+            Inherited from FeatureProcess class.
+            It is used to store cell-feature relationship. It is indexed by catchment grid cells that
+            they have been intersected with the feature map. Because a cell can be intersected by more than one
+            map geometry, access is given by: [cell] -> [geo_intersected] -> [cell_feature_relationship_data].
+            The stored values are:
+                - 'area': area occupied by geometry on the map.
+                - 'cell_id': cell ID. (ID in gw vector map grid)
+                - 'name': catchment name.
+                - 'map_name': catchment map name. (name used by GRASS Platform)
+
+        cell_ids: Dict[namedtuple<Cell>, Dict[str, str|int|List<data>]]
+            Inherited from FeatureProcess class.
+            Store for each cell the geometry (or geometries) that be stored in final file.
+            Structure and stored values details are in FeatureProcess class.
+
+        catchments : Dict[int, Dict[str, str | int]]
+            It is used to store catchment information obtained from surface map analysis.
+            (Stored data details are in GeoKernel class).
+
+        _catchment_names : Dict[str, int]
+            It is used internally to directly access catchment data by name.
+
+
+        Methods:
+        -------
+        _start(self, linkage_name: str)
+            Runs procedure for successful processing between feature map and inital GW grid.
+            The 'linkage_name' parameter refers to GW grid vector map.
+
+        run(self, linkage_name: str)
+            Start processing and records basic statistics of the execution.
+            The 'linkage_name' parameter refers to groundwater grid vector map.
+
+        set_data_from_geo(self)
+            Extracts catchment data from analyzed surface maps (arc and node).
+
+        make_cell_data_by_main_map(self, map_name, inter_map_name, inter_map_geo_type)
+            Create the structure that store necessary catchment data of the main map.
+            A main map generates a mandatory column for catchment in final file metadata (even if its values are null).
+
+        make_cell_data_by_secondary_maps(self, map_name, inter_map_name, inter_map_geo_type)
+            Currently, this method is not used because there is only one main map for catchment.
+
+
+        Example:
+        --------
+        >>> from processors.GeoKernel import GeoKernel
+        >>> from processors.CatchmentProcessor import CatchmentProcess
+        >>> from utils.Config import ConfigApp
+        >>> from utils.Errors import ErrorManager
+
+        >>> epsg_code, gisdb, location, mapset = 30719, '/tmp', 'test', 'PERMANENT'
+        >>> file_main_map, linkage_name = '/tmp/catch_map.shp', 'initial_gw_grid'
+
+        >>> config = ConfigApp(epsg_code=epsg_code, gisdb=gisdb, location=location, mapset=mapset)
+        >>> error = ErrorManager(config=config)
+        >>> geo = GeoKernel(config=config, err=error)
+
+        >>> processor = CatchmentProcess(geo=geo, config=config, err=error)
+        >>> processor.config.set_columns_to_save(processor.get_feature_type(), columns_to_save=1)
+        >>> processor.config.set_order_criteria(processor.get_feature_type(), order_criteria='area')
+        >>> processor.set_map_name(map_name='catch_vector_map', map_path=file_main_map, is_main_file=True)
+
+        >>> processor.import_maps()
+        >>> processor.check_names_with_geo()
+        >>> processor.check_names_between_maps()
+
+        >>> if not processor.check_errors():  # or processor.run(linkage_name=grid_vector_map)
+        >>>     processor.inter_map_with_linkage(linkage_name=grid_vector_map)
+        >>>     processor.make_grid_cell()
+
+        >>>     summary = processor.get_summary()
+
+        >>>     inputs = summary.print_input_params()  # inputs and stats
+        >>>     status_lines = summary.get_process_lines(with_ui=True)
+        >>>     errors = summary.print_errors()
+        >>>     warnings = summary.print_warnings()
+
+        >>>     print(inputs)
+
+    """
 
     def __init__(self, geo: GeoKernel = None, config: ConfigApp = None, debug: bool = False, err: ErrorManager = None):
         super().__init__(geo=geo, config=config, debug=debug, err=err)
 
         self.catchments = {}
         self._catchment_names = {}
-
-        self._feature_opts = {
-            'order_criteria': 'area',
-            'columns_to_save': 1
-        }
 
     def _start(self, linkage_name: str):
         # import files to vector maps
@@ -39,7 +121,7 @@ class CatchmentProcess(FeatureProcess):
         # check catchment geometries
         self.check_names_between_maps()
 
-        if not self.check_errors():
+        if not self.check_errors(types=[self.get_feature_type()]):
             # intersection between C (catchments map) and L (linkage map)
             _err_c, _errors_c = self.inter_map_with_linkage(linkage_name=linkage_name, snap='1e-12')
             if _err_c:
@@ -65,7 +147,7 @@ class CatchmentProcess(FeatureProcess):
 
         # Set inputs into summary
         # # set main field in map
-        field = self.config.get_config_field_name(feature_type=self.get_feature_type(), name='name')
+        field = self.config.get_config_field_name(feature_type=self.get_feature_type(), field_type='main')
         self.summary.set_input_param(param_name='FIELD NAME', param_value='[{}]'.format(field))
 
         # # imported file
@@ -113,7 +195,7 @@ class CatchmentProcess(FeatureProcess):
 
             Cell = namedtuple('Cell_catchment', ['row', 'col'])
 
-            fields = self.get_needed_field_names()
+            fields = self.get_needed_field_names(alias=self.get_feature_type())
             main_field, main_needed = fields['main']['name'], fields['main']['needed']
             field_feature_name = 'a_' + main_field
             col_field = 'b_' + self.config.fields_db['linkage']['col_in']
@@ -139,11 +221,11 @@ class CatchmentProcess(FeatureProcess):
 
         inter_map.close()
 
-        self.summary.set_process_line(msg_name='make_cell_data_by_main_map', check_error=self.check_errors(),
+        self.summary.set_process_line(msg_name='make_cell_data_by_main_map', check_error=self.check_errors(types=[self.get_feature_type()]),
                                       map_name=map_name, inter_map_name=inter_map_name,
                                       inter_map_geo_type=inter_map_geo_type)
 
-        return self.check_errors(), self.get_errors()
+        return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 
     # @main_task
     def make_cell_data_by_secondary_maps(self, map_name, inter_map_name, inter_map_geo_type):
@@ -151,108 +233,3 @@ class CatchmentProcess(FeatureProcess):
         return self.make_cell_data_by_main_map(map_name=map_name, inter_map_name=inter_map_name,
                                                inter_map_geo_type=inter_map_geo_type)
 
-    # @main_task
-    # def make_grid_cell(self, map_name: str):
-    #     # get the intersection map name
-    #     inter_map_name = self.get_inter_map_name(map_key=map_name)
-    #
-    #     inter_map = VectorTopo(inter_map_name)
-    #     inter_map.open('r')
-    #
-    #     fields = self.get_needed_field_names()
-    #     main_field, main_needed = fields['main']['name'], fields['main']['needed']
-    #     limit = (fields['limit']['name'], fields['limit']['needed']) if fields['limit'] else ('', None)
-    #     limit_field, limit_needed = limit[0], limit[1]
-    #
-    #     Cell = namedtuple('Cell_catchment', ['row', 'col'])
-    #     field_catchment = 'a_' + main_field
-    #     field_modflow = 'a_' + limit_field
-    #
-    #     col_field = 'b_' + self.config.fields_db['linkage']['col_in']
-    #     row_field = 'b_' + self.config.fields_db['linkage']['row_in']
-    #     for a in inter_map.viter('areas'):
-    #         if a.cat is None:  # when topology has some errors
-    #             # print("[ERROR] ", a.cat, a.id)
-    #             continue
-    #
-    #         area_name = a.attrs[field_catchment]
-    #
-    #         cell_area_id = a.attrs['b_cat']  # id from cell in linkage map
-    #         area_row, area_col = a.attrs[row_field], a.attrs[col_field]
-    #         area_area = a.area()
-    #
-    #         if limit_needed:  # TODO: never it will reviwed if [needed] = False. Update it is present
-    #             area_in_modflow = a.attrs[field_modflow]
-    #         else:
-    #             area_in_modflow = 1
-    #
-    #         if area_in_modflow == 1:
-    #             data = {
-    #                 'area': area_area,
-    #                 'cell_id': cell_area_id,
-    #                 'name': area_name
-    #             }
-    #
-    #             cell = Cell(area_row, area_col)
-    #             self._set_cell(cell, area_name, data, by_field='area')
-    #
-    #     # watch what is the best area for a cell by criteria
-    #     self._set_cell_by_criteria(CatchmentProcess.__cell_order_criteria(), by_field='area')
-    #
-    #     inter_map.close()
-    #
-    #     return self.check_errors(), self.get_errors()
-
-    # @main_task
-    # def get_catchments_from_map(self, map_name):
-    #     catchment_map = VectorTopo(map_name)
-    #     catchment_map.open()
-    #
-    #     fields = self.get_needed_field_names()
-    #     main_field, main_needed = fields['main']['name'], fields['main']['needed']
-    #     limit = (fields['limit']['name'], fields['limit']['needed']) if fields['limit'] else ('', None)
-    #     limit_field, limit_needed = limit[0], limit[1]
-    #
-    #     # check names between WEAPNode data and GW data
-    #     for a in catchment_map.viter('areas'):
-    #         if a.cat is None or not a.attrs[main_field]:
-    #             # print("[ERROR - {}] ".format(gws_name), a.cat, a.id)
-    #             continue
-    #         area_name = a.attrs[main_field]
-    #
-    #         if area_name in self.catchments:
-    #             feature_id = self.catchments[area_name]
-    #
-    #             if limit_needed:
-    #                 modflow = a.attrs[limit_field]
-    #                 # watch if it will be used
-    #                 if modflow:
-    #                     self.catchments[feature_id]['in_modflow'] = True
-    #                 else:
-    #                     self.catchments[feature_id]['in_modflow'] = False
-    #             else:
-    #                 self.catchments[feature_id]['in_modflow'] = True
-    #         else:
-    #             msg_err = 'Cuenca [{}] del [mapa] no se encuentra en [esquema WEAP].'\
-    #                 .format(area_name)
-    #             # _errors.append(msg_err)
-    #             self.append_error(msg=msg_err)
-    #
-    #     catchment_map.close()
-    #
-    #     return self.check_errors(), self.get_errors()
-
-    def get_needed_field_names(self):
-        fields = {
-            'main': {
-                'name': self.config.fields_db['catchment']['name'],
-                'needed': True
-            },
-            'secondary': None,
-            'limit': {
-                'name': self.config.fields_db['catchment']['modflow'],
-                'needed': False
-            },
-        }
-
-        return fields

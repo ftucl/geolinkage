@@ -1,28 +1,138 @@
 import time
-
-import ui
-from anytree import RenderTree
-from grass.exceptions import GrassError
-from grass.pygrass.modules import Module
-from grass.pygrass.utils import copy
-from grass.script import PIPE
-from grass_session import Session
-
-import Utils
-from Config import ConfigApp
-from Errors import ErrorManager
-from FeatureProcess import FeatureProcess
-from GeoKernel import GeoKernel
-from RiverNode import RiverNode
-
 from collections import namedtuple
 
+from grass.exceptions import GrassError
 from grass.pygrass.vector import VectorTopo
 
-from decorator import main_task, TimerSummary
+from utils.Utils import GrassCoreAPI, TimerSummary
+from utils.Config import ConfigApp
+from utils.Errors import ErrorManager
+from FeatureProcessor import FeatureProcess
+from GeoKernel import GeoKernel
+from utils.RiverNode import RiverNode
 
 
 class RiverProcess(FeatureProcess):
+    """
+        It contains the DS processor particular logic.
+
+        Process rivers generating a vector map from surface maps (node and arc maps).
+        Through the water injection or extraction nodes present in the surface maps, it determines the river segments o
+        identifying for one of these nodes, if the segment is the upper or lower one according to river flow.
+        This is required because for linking it is necessary to know where the water is drawn from.
+
+        By default, 1 column is generated in final file metadata (shapefile with linking grid). In which it is stored
+        segment and the river following the form: [segment name],[river name].
+
+
+        Attributes:
+        ----------
+        cells : Dict[namedtuple<Cell>, Dict[str, Dict[str, str|int]]
+            Inherited from FeatureProcess class.
+            It is used to store cell-feature relationship. It is indexed by DS grid cells that
+            they have been intersected with the feature map. Because a cell can be intersected by more than one
+            map geometry, access is given by: [cell] -> [geo_intersected] -> [cell_feature_relationship_data].
+            The stored values are:
+                - 'length': arc length which represents the river subsegment within the cell.
+                - 'cell_id': cell ID. (ID in gw grid's vector map)
+                - 'segment_name': River segment name. (ex: before [node_in_river])
+                - 'river_name': river name in surface arc map.
+                - 'name': name used to make the link. Format: [river name],[segment name].
+                - 'map_name': map name. (name used by GRASS)
+
+        cell_ids: Dict[namedtuple<Cell>, Dict[str, str|int|List<data>]]
+            Inherited from FeatureProcess class.
+            Store for each cell the geometry (s) that will actually be stored in final file. Structure and stored
+            values details are in FeatureProcess class.
+
+        rivers : Dict[int, Dict[str, str | int]]
+            It is used to store river information obtained from surface map analysis.
+            (Stored data details are in GeoKernel class).
+
+        _river_names : Dict[str, int]
+            It is used internally to directly access rivers data by name.
+
+        river_break_nodes : Dict[int, Dict[str, str | int | bool]]
+            Stores nodes that modify the river flow. Indexed by node ID.
+
+                Almacena los nodos que intervienen el flujo del rio. obtenidos del analisis de las geometrias del
+                mapa de nodos del esquema superficial. Indexado por el ID del nodo.
+
+        root : RiverNode
+            RiverNode instance that identifies access point to river segments, using the nodes of the surface map
+            that affect the river flow.
+
+
+
+        Methods:
+        -------
+        _start(self, linkage_name: str)
+            Runs procedure for successful processing between feature map and inital GW grid.
+            The 'linkage_name' parameter refers to GW grid vector map.
+
+        run(self, linkage_name: str)
+            Starts processing and records basic statistics of the execution.
+            The 'linkage_name' parameter refers to groundwater grid vector map.
+
+        set_data_from_geo(self)
+            Extracts rivers and nodes data from analyzed surface maps (arc and node).
+
+        make_cell_data_by_main_map(self, map_name, inter_map_name, inter_map_geo_type)
+            Creates the structure that store necessary river and segments data of the main map.
+            A main map generates a mandatory column for segments in final file metadata (even if its values are null).
+
+        make_cell_data_by_secondary_maps(self, map_name, inter_map_name, inter_map_geo_type)
+            Currently, this method is not used because there is only one main map for rivers.
+
+        _make_river_tree_segments_structure(self)
+            Create necessary structure to identify river segments through an RiverNode instance.
+            All nodes involved in the river flows are checked, identifying the anterior and posterior segment
+            each one of them.
+
+        _set_break_names_in_segments_map(self, segments_map_name='arc_segments')
+            Create segments vector map from rivers found in surface arc map. The parameters 'segments_map_name' is used
+            to give the name to the map, That map is intersected with GW grid vector map.
+
+
+
+        Example:
+        --------
+        >>> from processors.GeoKernel import GeoKernel
+        >>> from processors.RiverProcessor import RiverProcess
+        >>> from utils.Config import ConfigApp
+        >>> from utils.Errors import ErrorManager
+
+        >>> epsg_code, gisdb, location, mapset = 30719, '/tmp', 'test', 'PERMANENT'
+        >>> file_main_map, grid_vector_map = '/tmp/arc_map.shp', 'initial_gw_grid'
+
+        >>> config = ConfigApp(epsg_code=epsg_code, gisdb=gisdb, location=location, mapset=mapset)
+        >>> error = ErrorManager(config=config)
+        >>> geo = GeoKernel(config=config, err=error)
+
+        >>> processor = RiverProcess(geo=geo, config=config, err=error)
+        >>> processor.config.set_columns_to_save(processor.get_feature_type(), columns_to_save=1)
+        >>> processor.config.set_order_criteria(processor.get_feature_type(), order_criteria='length')
+        >>> processor.set_map_name(map_name='arc_vector_map', map_path=file_main_map, is_main_file=True)
+
+        >>> processor.import_maps()
+        >>> processor.check_names_with_geo()
+        >>> processor.check_names_between_maps()
+        >>> processor.make_segment_map(is_main_file=True)
+
+        >>> if not processor.check_errors():  # or processor.run(linkage_name=grid_vector_map)
+        >>>     processor.inter_map_with_linkage(linkage_name=grid_vector_map)
+        >>>     processor.make_grid_cell()
+
+        >>>     summary = processor.get_summary()
+
+        >>>     inputs = summary.print_input_params()  # inputs and stats
+        >>>     real_lines = summary.get_process_lines(with_ui=True)
+        >>>     errors = summary.print_errors()
+        >>>     warnings = summary.print_warnings()
+
+        >>>     print(inputs)
+
+        """
 
     def __init__(self, geo: GeoKernel = None, config: ConfigApp = None, debug: bool = False, err: ErrorManager = None):
         super().__init__(geo=geo, config=config, debug=debug, err=err)
@@ -31,11 +141,6 @@ class RiverProcess(FeatureProcess):
         self._river_names = {}
         self.river_break_nodes = {}
         self.root = RiverNode(node_id=-1, node_name='root', node_type=0, node_distance=0)
-
-        self._feature_opts = {
-            'order_criteria': 'length',
-            'columns_to_save': 1
-        }
 
     def _start(self, linkage_name: str):
         # import files to vector maps
@@ -50,7 +155,7 @@ class RiverProcess(FeatureProcess):
         # make rivers hierarchy with tree segment nodes
         _err_r, _errors_r = self.make_segment_map(is_main_file=True)
 
-        if not self.check_errors():
+        if not self.check_errors(types=[self.get_feature_type()]):
             # intersection between WEAPArc and L (linkage map)
             _err_r, _errors_r = self.inter_map_with_linkage(linkage_name=linkage_name, snap='1e-12')
             if _err_r:
@@ -75,8 +180,8 @@ class RiverProcess(FeatureProcess):
 
         # Set inputs into summary
         # # set main field in map
-        field_river = self.config.get_config_field_name(feature_type=self.get_feature_type(), name='river_name')
-        field_segment = self.config.get_config_field_name(feature_type=self.get_feature_type(), name='segment_break_name')
+        field_river = self.config.get_config_field_name(feature_type=self.get_feature_type(), field_type='main')
+        field_segment = self.config.get_config_field_name(feature_type=self.get_feature_type(), field_type='secondary')
         self.summary.set_input_param(param_name='FIELDS NAME', param_value='[{}] and [{}]'.format(field_river, field_segment))
 
         # # imported file
@@ -116,7 +221,7 @@ class RiverProcess(FeatureProcess):
 
         break_keys = [k for k in self.river_break_nodes.keys() if k != '_by_name']
         if break_keys:
-            # make real structure (hierarchization of rivers into segments)
+            # make real structure
             for key_name in break_keys:
                 break_node = self.river_break_nodes[key_name]
 
@@ -141,7 +246,7 @@ class RiverProcess(FeatureProcess):
 
                 # set main river
                 main_river_id = self.river_break_nodes[key_name]['main_river_id']
-                main_distance = self.river_break_nodes[key_name]['distance']
+                main_distance = self.river_break_nodes[key_name]['distance']  # between node to river
                 main_river_data = self.rivers[main_river_id]
                 river_node.set_main_river(main_river_data['id'], main_river_data['name'], main_river_data['cat'],
                                           main_distance)
@@ -161,52 +266,13 @@ class RiverProcess(FeatureProcess):
             #     print("%s %s | x=%s | y=%s | dist=%s | id=%s | cat=%s" %
             #           (pre, node.node_name, node.x, node.y, node.node_distance, node.node_id, node.node_cat))
 
-            segments = root.get_segments_list()
+            # segments = root.get_segments_list()
             # for seg in segments:
             #     print(seg)
         else:
             root = None
 
         return root
-
-    def _make_segments(self, arc_map_name='WEAPArc', output_map='weaparc_segments', verbose: bool = False, quiet: bool = True):
-        _err, _errors = False, []  # TODO: catch errors
-
-        root_node = self.root
-        arc_map_copy_name = arc_map_name + '_copy'
-        rivers_map_name = 'weaparc_rivers'
-
-        # (1) get only rivers
-        # copy to new map to work
-        copy(arc_map_name, arc_map_copy_name, 'vect', overwrite=True)  # get a copy from map
-
-        # extract only [TypeID]=6 in WEAPArc map
-        extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, quiet=quiet, verbose=verbose)
-        extract.inputs.input = arc_map_copy_name
-        extract.outputs.output = rivers_map_name
-
-        extract.inputs.where = "TypeID=6"
-        extract.inputs.type = 'line'
-        # print(extract.get_bash())
-        extract.run()
-        # print(extract.outputs["stdout"].value)
-        # print(extract.outputs["stderr"].value)
-
-        # (2) apply river tree to divide them in segments
-        segments_str = root_node.get_segments_format()
-
-        vsegment = Module('v.segment', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose,
-                          quiet=quiet)
-        vsegment.inputs.input = rivers_map_name
-        vsegment.inputs.stdin = segments_str
-        vsegment.outputs.output = output_map
-
-        # print(vsegment.get_bash())
-        vsegment.run()
-        # print(vsegment.outputs["stdout"].value)
-        # print(vsegment.outputs["stderr"].value)
-
-        return _err, _errors
 
     def _set_break_names_in_segments_map(self, segments_map_name='arc_segments'):
         _err, _errors = False, []  # TODO: catch errors
@@ -219,11 +285,10 @@ class RiverProcess(FeatureProcess):
 
         # create attribute table and link with vector map
         columns_str = ','.join(['{} {}'.format(col[0], col[1]) for col in columns])  # columns format
-        Utils.create_table_attributes(segments_map_name, columns_str, layer=1, key='cat')
+        GrassCoreAPI.create_table_attributes(segments_map_name, columns_str, layer=1)
 
         # set break names in map
         segment_map = VectorTopo(segments_map_name)
-        # segment_map.open('rw', tab_name=segments_map_name, tab_cols=cols, link_key='cat', overwrite=True)
         segment_map.open('rw')
 
         for feature in segment_map.viter('lines'):
@@ -257,7 +322,7 @@ class RiverProcess(FeatureProcess):
         if self.root:
             # TODO: check if copy and extract maps were created
             # filter only rivers from WEAPArc and apply hierarchy to divide rivers in segment lines
-            _err, _errors = self._make_segments(arc_map_name=arc_map_name, output_map=segments_map_name)
+            _err, _errors = GrassCoreAPI.make_segments(root=self.root, arc_map_name=arc_map_name, output_map=segments_map_name)
             self.append_error(msgs=_errors) if _err else None
 
             # put segment names in [river_segments_map]
@@ -273,9 +338,9 @@ class RiverProcess(FeatureProcess):
         # the intersection map is with 'lines' geos not the default 'areas'
         self.set_inter_map_geo_type(map_key=segments_map_name, geo_map_type='lines')
 
-        self.summary.set_process_line(msg_name='make_segment_map', check_error=self.check_errors())
+        self.summary.set_process_line(msg_name='make_segment_map', check_error=self.check_errors(types=[self.get_feature_type()]))
 
-        return self.check_errors(), self.get_errors()
+        return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 
     # @main_task
     def make_cell_data_by_main_map(self, map_name, inter_map_name, inter_map_geo_type):
@@ -289,7 +354,7 @@ class RiverProcess(FeatureProcess):
 
             Cell = namedtuple('Cell_river', ['row', 'col'])
 
-            fields = self.get_needed_field_names()
+            fields = self.get_needed_field_names(alias=self.get_feature_type())
             main_field, main_needed = fields['main']['name'], fields['main']['needed']
             second_field, second_needed = fields['secondary']['name'], fields['secondary']['needed']
 
@@ -321,11 +386,11 @@ class RiverProcess(FeatureProcess):
 
         inter_map.close()
 
-        self.summary.set_process_line(msg_name='make_cell_data_by_main_map', check_error=self.check_errors(),
+        self.summary.set_process_line(msg_name='make_cell_data_by_main_map', check_error=self.check_errors(types=[self.get_feature_type()]),
                                       map_name=map_name, inter_map_name=inter_map_name,
                                       inter_map_geo_type=inter_map_geo_type)
 
-        return self.check_errors(), self.get_errors()
+        return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 
     # @main_task
     def make_cell_data_by_secondary_maps(self, map_name, inter_map_name, inter_map_geo_type):
@@ -333,75 +398,11 @@ class RiverProcess(FeatureProcess):
         return self.make_cell_data_by_main_map(map_name=map_name, inter_map_name=inter_map_name,
                                                inter_map_geo_type=inter_map_geo_type)
 
+    def set_map_names(self):
+        super().set_map_names()
 
-    # @main_task
-    # def make_grid_cell(self, map_name: str):
-    #     # get the intersection map name
-    #     inter_map_name = self.get_inter_map_name(map_key=map_name)
-    #
-    #     inter_map = VectorTopo(inter_map_name)
-    #     inter_map.open('r')
-    #
-    #     Cell = namedtuple('Cell_river', ['row', 'col'])
-    #     field_segment_break_name = 'a_' + self.config.fields_db['river']['segment_break_name']
-    #     field_river_name = 'a_' + self.config.fields_db['river']['river_name']
-    #     col_field = 'b_' + self.config.fields_db['linkage']['col_in']
-    #     row_field = 'b_' + self.config.fields_db['linkage']['row_in']
-    #     for a in inter_map.viter('lines'):
-    #         area_name = a.attrs[field_segment_break_name]
-    #         area_river_name = a.attrs[field_river_name]
-    #
-    #         area_id = a.attrs['b_cat']  # id from cell in linkage map
-    #         area_row, area_col = a.attrs[row_field], a.attrs[col_field]
-    #         line_length = a.length()
-    #
-    #         data = {
-    #             'length': line_length,
-    #             'cell_id': area_id,
-    #             'segment_name': area_name,
-    #             'river_name': area_river_name
-    #         }
-    #
-    #         cell = Cell(area_row, area_col)
-    #         self._set_cell(cell, area_name, data, by_field='length')
-    #
-    #     # watch what is the best area for a cell by criteria
-    #     self._set_cell_by_criteria(RiverProcess.__cell_order_criteria(), by_field='length')
-    #
-    #     inter_map.close()
-    #
-    #     return self.check_errors(), self.get_errors()
-
-    def get_needed_field_names(self):
-        fields = {
-            'main': {
-                'name': self.config.fields_db['river']['river_name'],
-                'needed': True
-            },
-            'secondary': {
-                'name': self.config.fields_db['river']['segment_break_name'],
-                'needed': True
-            },
-            'limit': None
-        }
-
-        return fields
-
-    # def check_basic_columns(self, map_name: str):
-    #     _err, _errors = False, []
-    #     fields = self.get_needed_field_names()
-    #
-    #     for field_key in [field for field in fields if fields[field]]:
-    #         field_name = fields[field_key]['name']
-    #         needed = fields[field_key]['needed']
-    #
-    #         __err, __errors = Utils.check_basic_columns(map_name=map_name, columns=[field_name], needed=[needed])
-    #
-    #         _errors += __errors
-    #         if needed:
-    #             _err |= __err
-    #
-    #     self.append_error(msgs=_errors, typ='other')
-    #
-    #     return _err, _errors
+        # because river map is based on arc map, the intersection map is with 'lines'
+        map_names = [m for m in self.get_map_names(only_names=True, with_main_file=True, imported=False)]
+        for map_name in map_names:
+            self.set_inter_map_geo_type(map_key=map_name, geo_map_type='lines')
 
