@@ -1,6 +1,6 @@
 import ui
 
-from Utils import UtilMisc
+from utils.Utils import UtilMisc
 from utils.Config import ConfigApp
 from utils.Errors import ErrorManager
 

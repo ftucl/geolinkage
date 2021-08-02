@@ -4,7 +4,7 @@ from grass.pygrass.vector import VectorTopo
 
 from utils.Utils import GrassCoreAPI, UtilMisc
 from utils.Errors import ErrorManager
-from GeoKernel import GeoKernel
+from processors.GeoKernel import GeoKernel
 from utils.SummaryInfo import SummaryInfo
 from utils.Config import ConfigApp
 from utils.Protocols import MapFileManagerProtocol

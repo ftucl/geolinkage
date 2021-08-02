@@ -7,8 +7,8 @@ from grass.pygrass.vector import VectorTopo
 from utils.Utils import GrassCoreAPI, TimerSummary
 from utils.Config import ConfigApp
 from utils.Errors import ErrorManager
-from FeatureProcessor import FeatureProcess
-from GeoKernel import GeoKernel
+from processors.FeatureProcessor import FeatureProcess
+from processors.GeoKernel import GeoKernel
 from utils.RiverNode import RiverNode
 
 

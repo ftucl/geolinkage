@@ -2,7 +2,7 @@ import os
 from abc import abstractmethod, ABCMeta
 import ui
 
-from Utils import GrassCoreAPI, UtilMisc
+from utils.Utils import GrassCoreAPI, UtilMisc
 from utils.Config import ConfigApp
 from utils.Errors import ErrorManager
 

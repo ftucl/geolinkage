@@ -1,7 +1,7 @@
 import ui
 
-from Utils import UtilMisc
-from Config import ConfigApp
+from utils.Utils import UtilMisc
+from utils.Config import ConfigApp
 
 
 class ErrorManager:
