@@ -176,7 +176,7 @@ class AppKernel(MapFileManagerProtocol):
                 self.set_demand_site_well(file_path=file_name)
         else:
             # ds folder problem with error code [-17]
-            self.append_error(msg=exist_folders[0][1], is_warn=False, code=code_error)
+            self.append_error(msg=exist_folders[0][1], is_warn=False, code=code_error, typ=self.demand_site_processor.get_feature_type())
 
         return self.check_errors(code=code_error), self.get_errors(code=code_error)
 
@@ -433,6 +433,7 @@ class AppKernel(MapFileManagerProtocol):
 
         # Necessary Files
         if self.check_input_files_error():
+            self.print_errors(feature_type=self.get_feature_type())
             raise RuntimeError('[EXIT] UNO DE LOS ARCHIVOS IMPORTANTES NO EXISTE')
 
         linkage_name, linkage_file_path = self.get_linkage_in_file()[0]  # only one file

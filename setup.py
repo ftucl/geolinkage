@@ -5,175 +5,301 @@ import subprocess
 import pkg_resources
 import importlib
 
-# Ruta en Linux / MAC de carpeta GRASS
-# CONFIG_GRASS_PATH = '/usr/lib/grass78'  # ejemplo: /usr/lib/grass78
-CONFIG_GRASS_PATH = subprocess.check_output(["grass78", "--config", "path"]).decode("utf-8").strip()
 
-# Paquetes usados en la aplicacion
-PACKAGES = {
-    'python-cli-ui': {
-        'version': '0.7.5',
-        'module': 'ui'
-    },
-    'grass-session': {
+CONFIG_GRASS_PATH = ''
+
+
+class SetupStatus:
+    # Paquetes usados en la aplicacion
+    PACKAGES = {
+        'python-cli-ui': {
+            'version': '0.7.5',
+            'module': 'ui'
+        },
+        'grass-session': {
             'version': '0.5',
             'module': 'grass-session'
         },
-    'flopy': {
+        'flopy': {
             'version': '3.3.1',
             'module': 'flopy'
         },
-    'anytree': {
+        'anytree': {
             'version': '2.8.0',
             'module': 'anytree'
         },
-    'pyshp': {
+        'pyshp': {
             'version': '2.1.2',
             'module': 'pyshp'
         },
-}
+    }
 
+    def __init__(self):
+        self.PACKAGES = SetupStatus.PACKAGES.copy()
+        self.process_lines = {}
+        self.package_lines = {}
+        self.reqs = {}
+
+        self.packages_installed = []
+        self.packages_missed = []
+
+        # status
+        self._MISSED_PAQ = False
+        self._ERROR_REQ = False
+
+        self.summary = SummaryStatus()
+
+    def set_req_status(self, req: str, msg: str, status):
+        line = {
+            'req': req,
+            'msg': msg,
+            'status': status
+        }
+
+        if req in self.reqs:
+            self.reqs[req].append(line)
+        else:
+            self.reqs[req] = [line]
+
+        if status == 'ERROR':
+            self._ERROR_REQ = True
+
+    def get_packages(self):
+        return self.PACKAGES
+
+    def get_installed_packages(self):
+        return self.packages_installed
+
+    def get_missed_packages(self):
+        return self.packages_missed
+
+    def check_packages(self):
+        required = self.PACKAGES.keys()
+        package_installed = {pkg.key for pkg in pkg_resources.working_set}
+        self.packages_missed = required - package_installed
+
+        for package in required:
+            self.package_lines[package] = {}
+            if package in package_installed:
+                self.package_lines[package]['status'] = 'FOUND'
+            else:
+                self.package_lines[package]['status'] = 'NOT FOUND'
+
+        self._MISSED_PAQ = len(self.packages_missed) > 0
+
+        return self._MISSED_PAQ
+
+    def add_process_msg(self, package, msg, status, info=None):
+        line = {
+            'msg': msg,
+            'status': status,
+            'info': info
+        }
+
+        if package in self.process_lines:
+            self.process_lines[package].append(line)
+        else:
+            self.process_lines[package] = [line]
+
+    def get_summary(self):
+        summary_text = self.summary.get_summary(reqs_status=self.reqs, packages_status=self.package_lines,
+                                                process_status=self.process_lines)
+        return summary_text
+
+
+class SummaryStatus:
+    def __init__(self, title: str = None):
+        self.lines = []
+
+        if title:
+            line = {
+                'msg': title,
+                'status': False,  # 'OK', 'NOT FOUND', 'ERROR', 'INSTALLED'
+                'level': 0
+            }
+
+            self.lines.append(line)
+
+    def get_summary(self, reqs_status, packages_status, process_status):
+        packages = SetupStatus.PACKAGES
+
+        # Requirements Status
+        msg_title = '{}\n{}\n{}'.format('=' * 25, 'Requirements Status', '=' * 25)
+        self.lines.append(msg_title)
+        for req_name in reqs_status:
+            for req in reqs_status[req_name]:
+                req_name, req_msg, req_status = req['req'], req['msg'], req['status']
+                msg_info = '    (*) {}: [{}]'.format(req_msg, req_status)
+                self.lines.append(msg_info)
+        self.lines.append("\n")
+
+        # Packages Status
+        msg_title = '{}\n{}\n{}'.format('=' * 25, 'Packages Status', '=' * 25)
+        self.lines.append(msg_title)
+        for package in packages_status:
+            package_status, package_version = packages_status[package]['status'], packages[package]['version']
+            msg_info = '   (+) {} (version: {}): [{}]'.format(package, package_version, package_status)
+            self.lines.append(msg_info)
+        self.lines.append("\n")
+
+        # Process Status
+        msg_title = '{}\n{}\n{}'.format('-' * 25, 'Process Status', '-' * 25)
+        self.lines.append(msg_title)
+        for process_name in process_status:
+
+            for process in process_status[process_name]:
+                proc_info, proc_msg, proc_status = process['info'], process['msg'], process['status']
+
+                if process_name in reqs_status:
+                    msg_info = '    (*)=> {}: [{}]'.format(proc_msg, proc_status)
+                else:
+                    msg_info = '    (+)=> {}: [{}]'.format(proc_msg, proc_status)
+                self.lines.append(msg_info)
+
+                if proc_info:
+                    msg_comment = '      {}'.format(proc_info)
+                    self.lines.append(msg_comment)
+            self.lines.append("\n")
+        self.lines.append("\n")
+
+        summary_text = '\n'.join(self.lines)
+
+        return summary_text
 
 # LD_LIBRARY_PATH=$(grass78 --config path)/lib
 # os.putenv("LD_LIBRARY_PATH", "123")
 
-process_lines = {}
-package_lines = {}
 
+def import_package(package, summary):
+    packages = summary.get_packages()
 
-def add_grass_path():
-    # Necesario para poder encontrar librerias de GRASS
-    sys.path.append(CONFIG_GRASS_PATH + '/etc/python')
-    sys.path.append(CONFIG_GRASS_PATH + '/lib')
-
-
-def add_process_msg(package, msg, status, info=None):
-    line = {
-        'msg': msg,
-        'status': status,
-        'info': info
-    }
-
-    if package in process_lines:
-        process_lines[package].append(line)
-    else:
-        process_lines[package] = [line]
-
-
-def import_package(package):
-    module = PACKAGES[package]['module']
-    version = PACKAGES[package]['version']
+    module = packages[package]['module']
+    version = packages[package]['version']
 
     msg_search = 'Searching package: [{}]'.format(package)
     msg_install = 'Installing package: [{}] v{}'.format(package, version)
 
     try:
         importlib.import_module(module)
-        add_process_msg(package=package, msg=msg_search, status='FOUND')
+        summary.add_process_msg(package=package, msg=msg_search, status='FOUND')
     except ModuleNotFoundError:
-        add_process_msg(package=package, msg=msg_search, status='NOT FOUND')
+        summary.add_process_msg(package=package, msg=msg_search, status='NOT FOUND')
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
-            add_process_msg(package=package, msg=msg_install, status='INSTALLED')
+            summary.add_process_msg(package=package, msg=msg_install, status='INSTALLED')
         except subprocess.CalledProcessError:
             msg_info = 'Need to be manually installed: pip3 install {}=={}'.format(package, version)
-            add_process_msg(package=package, msg=msg_install, status='NOT INSTALLED', info=msg_info)
+            summary.add_process_msg(package=package, msg=msg_install, status='NOT INSTALLED', info=msg_info)
 
 
-def show_msg_info_without_ui(msg_info, is_subtask=False, is_title=False):
-    task_token = '::'
-    subtask_token = '    =>'
-    title_len = len(msg_info) if len(msg_info) > 80 else 80
-
-    if is_title:
-        print('\n')
-        print('-' * (title_len + 2))
-        print(msg_info)
-        print('-' * (title_len + 2))
-    elif is_subtask:
-        print('{} {}'.format(subtask_token, msg_info))
-    else:
-        print('{} {}'.format(task_token, msg_info))
+def set_ld_library():
+    import os
+    os.environ['LD_LIBRARY_PATH'] = '/var/test2'
 
 
-def check_packages():
-    required = PACKAGES.keys()
-    installed = {pkg.key for pkg in pkg_resources.working_set}
-    missing = required - installed
-
-    for package in required:
-        if package in installed:
-            package_lines[package] = '[FOUND]'
-        else:
-            package_lines[package] = '[NOT FOUND]'
-
-    if missing:
-        for package in missing:
-            import_package(package)
-
-
-def check_ui():
-    ret = False
-
-    package = 'python-cli-ui'
-    module = PACKAGES[package]['module']
+def grass_check():
     try:
-        importlib.import_module(module)
-        ret = True
-    except ModuleNotFoundError:
-        ret = False
+        CONFIG_GRASS_PATH = subprocess.check_output(["grass78", "--config", "path"]).decode("utf-8").strip()
+        is_grass = True
+    except subprocess.CalledProcessError:
+        is_grass = False
+    except FileNotFoundError:
+        is_grass = False
 
-    return ret
+    return is_grass
 
 
-def print_summary_ui():
-    import ui
+def pip_check():
+    try:
+        msg_info = '[*] pip is installed.'
+        subprocess.check_call([sys.executable, "-m", "pip", '-h'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        is_pip = True
+    except subprocess.CalledProcessError:
+        is_pip = False
 
-    ui.info_section('STATUS')
-    for package in package_lines:
-        ui.info(ui.bold, '{}: '.format(package), ui.faint, ui.darkred, '{}'.format(package_lines[package]))
-    print('\n')
+    return is_pip
 
-    for package in process_lines:
-        line = process_lines[package]
-        ui.info_section(package)
 
-        if line['info'] is not None:
-            ui.info('\n\r', ui.bold, ui.red, '    => ', ui.reset, '{}: '.format(line['msg']),
-                    ui.bold, ui.darkred, '[{}]'.format(line['status']), ui.reset, ' ({})'.format(line['info']))
-        else:
-            ui.info('\n\r', ui.bold, ui.red, '    => ', ui.reset, '{}: '.format(line['msg']),
-                    ui.bold, ui.darkred, '[{}]'.format(line['status']))
-    print('\n')
+def ld_library_check(grass_path: str = None):
+    import os
+    # os.putenv("LD_LIBRARY_PATH", "123")
+    grass_lib_path = os.path.join(grass_path, '/lib')
+
+    is_ld_var = os.getenv("LD_LIBRARY_PATH") and 'LD_LIBRARY_PATH' in os.environ
+
+    return is_ld_var
+
+
+def make_ld_var_config_file():
+    try:
+        status_msg = subprocess.call(['sh', './setup_ld_var.sh'])
+        is_ok = True
+    except subprocess.CalledProcessError:
+        is_ok = False
+    except FileNotFoundError:
+        is_ok = False
+
+    return is_ok
+
+# LD_LIBRARY_PATH=$(grass78 --config path)/lib
+# os.putenv("LD_LIBRARY_PATH", "123")
 
 
 def setup_app():
-    add_grass_path()
-    check_packages()
+    from sys import platform
+    import os
 
-    # with_ui = check_ui()
-    with_ui = False
-    if not with_ui:
-        msg_title = 'STATUS'
-        show_msg_info_without_ui(msg_info=msg_title, is_title=True)
+    setup_status = SetupStatus()
 
-        for package in package_lines:
-            msg_info = '{}: {}'.format(package, package_lines[package])
-            print('    {}'.format(msg_info))
-        print('\n')
-
-        for package in process_lines:
-            line = process_lines[package]
-            show_msg_info_without_ui(msg_info=package)
-
-            if line['info'] is not None:
-                msg_info = '{}: [{}] ({})'.format(line['msg'], line['status'], line['info'])
-            else:
-                msg_info = '{}: [{}]'.format(line['msg'], line['status'])
-            show_msg_info_without_ui(msg_info=msg_info, is_subtask=True)
-        print('\n')
+    # Required checks
+    # Grass Requirement
+    is_grass = grass_check()
+    if is_grass:
+        msg_info = 'GRASS is installed.'
+        setup_status.set_req_status(req='grass', msg=msg_info, status='OK')
     else:
-        print_summary_ui()
+        msg_info = 'GRASS need to be manually installed and its libs in PATH variable. (Linux hint: sudo apt-get install grass)'
+        setup_status.set_req_status(req='grass', msg=msg_info, status='ERROR')
+
+    # PIP Requirement
+    is_pip = pip_check()
+    if is_pip:
+        msg_info = 'pip is installed.'
+        setup_status.set_req_status(req='pip', msg=msg_info, status='OK')
+    else:
+        msg_info = 'pip need to be manually installed. (Linux hint: sudo apt-get install pip)'
+        setup_status.set_req_status(req='pip', msg=msg_info, status='ERROR')
+
+    # LD_LIBRARY_PATH check (warning in Linux)
+    is_ld_var = ld_library_check(grass_path=CONFIG_GRASS_PATH)
+    if is_ld_var:
+        msg_info = '[LD_LIBRARY_PATH] environment variable is correctly set.'
+        setup_status.set_req_status(req='LD_LIBRARY_PATH', msg=msg_info, status='OK')
+    else:
+        if platform == "linux" or platform == "linux2":
+            is_ok = make_ld_var_config_file()
+
+            msg_info = 'Making config file to set [LD_LIBRARY_PATH]'
+
+            if not is_ok:
+                setup_status.set_req_status(req='LD_LIBRARY_PATH', msg=msg_info, status='ERROR')
+                grass_lib_path = os.path.join(CONFIG_GRASS_PATH, 'lib')
+                msg_info = '[warning] [LD_LIBRARY_PATH] environment variable is not set. If you have problem to execute the application,' \
+                           ' please set it to grass lib path ({}). ' \
+                           '(Linux hint: export LD_LIBRARY_PATH=\'{}\')'.format(grass_lib_path, grass_lib_path)
+                setup_status.set_req_status(req='LD_LIBRARY_PATH', msg=msg_info, status='ERROR')
+            else:
+                setup_status.set_req_status(req='LD_LIBRARY_PATH', msg=msg_info, status='OK')
+
+    # package checks
+    is_missed = setup_status.check_packages()
+    if is_missed:
+        packages_missed = setup_status.get_missed_packages()
+        for package in packages_missed:
+            import_package(package, summary=setup_status)
+
+    summary_text = setup_status.get_summary()
+    print(summary_text)
 
 
 if __name__ == '__main__':

@@ -266,7 +266,7 @@ class RiverProcess(FeatureProcess):
             #     print("%s %s | x=%s | y=%s | dist=%s | id=%s | cat=%s" %
             #           (pre, node.node_name, node.x, node.y, node.node_distance, node.node_id, node.node_cat))
 
-            # segments = root.get_segments_list()
+            segments = root.get_segments_list()
             # for seg in segments:
             #     print(seg)
         else:
@@ -319,26 +319,29 @@ class RiverProcess(FeatureProcess):
         # make hierarchy of rivers with tree segment nodes
         self.root = self._make_river_tree_segments_structure()
 
-        if self.root:
+        if self.root and self.root.get_segments_list():
             # TODO: check if copy and extract maps were created
             # filter only rivers from WEAPArc and apply hierarchy to divide rivers in segment lines
             _err, _errors = GrassCoreAPI.make_segments(root=self.root, arc_map_name=arc_map_name, output_map=segments_map_name)
-            self.append_error(msgs=_errors) if _err else None
+            self.append_error(msgs=_errors, typ=self.get_feature_type()) if _err else None
 
             # put segment names in [river_segments_map]
             _err, _errors = self._set_break_names_in_segments_map(segments_map_name=segments_map_name)
-            self.append_error(msgs=_errors) if _err else None
+            self.append_error(msgs=_errors, typ=self.get_feature_type()) if _err else None
 
-        # set segment map like the main river map
-        self.set_map_name(map_name=segments_map_name, map_path='', is_main_file=is_main_file)
+            # set segment map like the main river map
+            self.set_map_name(map_name=segments_map_name, map_path='', is_main_file=is_main_file)
 
-        # it was imported because it is based in Arc map
-        self.map_names[segments_map_name]['imported'] = True
+            # it was imported because it is based in Arc map
+            self.map_names[segments_map_name]['imported'] = True
 
-        # the intersection map is with 'lines' geos not the default 'areas'
-        self.set_inter_map_geo_type(map_key=segments_map_name, geo_map_type='lines')
+            # the intersection map is with 'lines' geos not the default 'areas'
+            self.set_inter_map_geo_type(map_key=segments_map_name, geo_map_type='lines')
 
-        self.summary.set_process_line(msg_name='make_segment_map', check_error=self.check_errors(types=[self.get_feature_type()]))
+            self.summary.set_process_line(msg_name='make_segment_map', check_error=self.check_errors(types=[self.get_feature_type()]))
+        else:
+            msg_info = 'Not rivers found in in map: [{}]'.format(arc_map_name)
+            self.append_error(msg=msg_info, typ=self.get_feature_type(), is_warn=True)
 
         return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
 

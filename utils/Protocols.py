@@ -20,7 +20,7 @@ class ErrorProtocol:
         self._err = error
         self.__config = config
 
-    def append_error(self, typ: str, msg: str = None, msgs: list = (), is_warn: bool = False, code: str = ''):
+    def append_error(self, typ: str = None, msg: str = None, msgs: list = (), is_warn: bool = False, code: str = ''):
         typ = typ if typ else self.__config.type_names['AppKernel']
 
         if is_warn:

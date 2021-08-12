@@ -444,8 +444,9 @@ class FeatureProcess(MapFileManagerProtocol, metaclass=ABCMeta):
                 x_offset_ll = self.x_ll - x_ini_ll
                 y_offset_ll = self.y_ll - y_ini_ll
                 map_name_out = '{}_transform'.format(map_name)
-                _err, _errors = UtilMisc.set_origin_in_map(map_name=map_name, map_name_out=map_name_out,
-                                                           x_offset_ll=x_offset_ll, y_offset_ll=y_offset_ll, z_rotation=self.z_rotation)
+                _err, _errors = GrassCoreAPI.set_origin_in_map(map_name=map_name, map_name_out=map_name_out,
+                                                               x_offset_ll=x_offset_ll, y_offset_ll=y_offset_ll,
+                                                               z_rotation=self.z_rotation)
 
                 self.summary.set_process_line(msg_name='set_origin_in_map', check_error=_err,
                                               map_name=map_name, x_ll=self.x_ll, y_ll=self.y_ll, z_rot=self.z_rotation)

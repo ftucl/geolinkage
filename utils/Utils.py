@@ -11,7 +11,7 @@ import time
 from grass.pygrass.modules import Module
 from grass.pygrass.vector import Vector, VectorTopo
 from grass.pygrass.vector.table import Columns
-from grass.pygrass.utils import copy
+from grass.pygrass.utils import copy, rename, remove
 
 from utils.Config import ConfigApp
 from utils.RiverNode import RiverNode
@@ -77,6 +77,8 @@ class GrassCoreAPI:
     quiet = None
     verbose = None
 
+    _debug_lines = []
+
     @classmethod
     def __set_verbosity(cls):
         from grass.script import core as gc
@@ -95,6 +97,10 @@ class GrassCoreAPI:
         return verbosity
 
     @classmethod
+    def get_debug_lines(cls):
+        return cls._debug_lines
+
+    @classmethod
     def inter_map_with_linkage(cls, map_name, linkage_name, output_name, snap='1e-12', verbose: bool = False,
                                quiet: bool = True):
         _err, _errors = False, []  # TODO: catch errors
@@ -110,8 +116,7 @@ class GrassCoreAPI:
         vector_map = Vector(map_copy_name)
         if vector_map.exist():
             # intersect vector maps
-            overlay = Module('v.overlay', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose,
-                             quiet=quiet)
+            overlay = Module('v.overlay', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
             overlay.flags.c = True
 
             overlay.inputs.ainput = map_copy_name
@@ -123,7 +128,9 @@ class GrassCoreAPI:
             overlay.inputs.snap = snap
             overlay.outputs.output = output_name
 
-            # print(overlay.get_bash())
+            debug_line = overlay.get_bash()
+            GrassCoreAPI._debug_lines.append(debug_line)
+
             overlay.run()
             # print(overlay.outputs["stdout"].value)
             # print(overlay.outputs["stderr"].value)
@@ -151,8 +158,7 @@ class GrassCoreAPI:
         quiet = cls.quiet if cls.quiet is not None else quiet
 
         # import vector map in [map_path]
-        out_ogr = Module('v.out.ogr', run_=False, stdout_=PIPE, stderr_=PIPE, verbose=verbose, overwrite=True,
-                         quiet=quiet)
+        out_ogr = Module('v.out.ogr', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
 
         out_ogr.inputs.input = map_name
         out_ogr.inputs.type = ['auto']
@@ -161,7 +167,9 @@ class GrassCoreAPI:
         out_ogr.outputs.output = '{}/{}'.format(output_path, file_name)
         out_ogr.flags.e = True
 
-        # print(out_ogr.get_bash())
+        debug_line = out_ogr.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         out_ogr.run()
         # print(out_ogr.outputs["stdout"].value)
 
@@ -177,14 +185,15 @@ class GrassCoreAPI:
         quiet = cls.quiet if cls.quiet is not None else quiet
 
         # import vector map in [map_path]
-        in_ogr = Module('v.in.ogr', run_=False, stdout_=PIPE, stderr_=PIPE, verbose=verbose, overwrite=True,
-                        quiet=quiet)
+        in_ogr = Module('v.in.ogr', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
 
         in_ogr.inputs.input = map_path
         in_ogr.outputs.output = output_name + '_tmp'
         in_ogr.flags.o = True
 
-        # print(in_ogr.get_bash())
+        debug_line = in_ogr.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         in_ogr.run()
         # print(in_ogr.outputs["stdout"].value)
 
@@ -207,7 +216,7 @@ class GrassCoreAPI:
         verbose = cls.verbose if cls.verbose is not None else verbose
         quiet = cls.quiet if cls.quiet is not None else quiet
 
-        vclean = Module('v.clean', run_=False, stdout_=PIPE, stderr_=PIPE, verbose=verbose, overwrite=True, quiet=quiet)
+        vclean = Module('v.clean', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
 
         vclean.inputs.input = map_name
         vclean.outputs.output = map_new_name
@@ -215,7 +224,9 @@ class GrassCoreAPI:
         vclean.inputs.tool = tool
         vclean.inputs.threshold = threshold
 
-        # print(vclean.get_bash())
+        debug_line = vclean.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         vclean.run()
         # print(vclean.outputs["stdout"].value)
 
@@ -278,24 +289,28 @@ class GrassCoreAPI:
         quiet = cls.quiet if cls.quiet is not None else quiet
 
         # add columns to vector map
-        addtable = Module('v.db.addtable', run_=False, stdout_=PIPE, stderr_=PIPE, verbose=verbose, quiet=quiet)
+        addtable = Module('v.db.addtable', run_=False, stdout_=PIPE, stderr_=PIPE)
         addtable.inputs.map = vector_map_name
         addtable.inputs.table = vector_map_name
         addtable.inputs.layer = layer
         # addtable.inputs.key = key
         addtable.inputs.columns = columns_str
 
-        # print(addtable.get_bash())
+        debug_line = addtable.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         addtable.run()
         # print(addtable.outputs["stdout"].value)
         # print(addtable.outputs["stderr"].value)
 
         # for security, rebuild topology
-        vbuild = Module('v.build', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose, quiet=quiet)
+        vbuild = Module('v.build', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
         vbuild.inputs.map = vector_map_name
         vbuild.inputs.option = 'build'
 
-        # print(vbuild.get_bash())
+        debug_line = vbuild.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         vbuild.run()
         # print(vbuild.outputs["stdout"].value)
         # print(vbuild.outputs["stderr"].value)
@@ -312,14 +327,16 @@ class GrassCoreAPI:
         verbose = cls.verbose if cls.verbose is not None else verbose
         quiet = cls.quiet if cls.quiet is not None else quiet
 
-        extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose,
-                         quiet=quiet)
+        extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
         extract.inputs.input = map_name
         extract.outputs.output = output_name
 
         extract.inputs.where = "{}{}\'{}\'".format(col_query, op_query, val_query)
         extract.inputs.type = ['point', 'line', 'boundary', 'centroid', 'area']
-        # print(extract.get_bash())
+
+        debug_line = extract.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         extract.run()
 
         # check if it was created
@@ -343,7 +360,7 @@ class GrassCoreAPI:
         verbose = cls.verbose if cls.verbose is not None else verbose
         quiet = cls.quiet if cls.quiet is not None else quiet
 
-        buffer = Module('v.buffer', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose, quiet=quiet)
+        buffer = Module('v.buffer', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
 
         buffer.inputs.input = map_pts_name
         buffer.inputs.type = map_type
@@ -354,7 +371,9 @@ class GrassCoreAPI:
         buffer.flags.t = True
         buffer.flags.s = True
 
-        # print(buffer.get_bash())
+        debug_line = buffer.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         buffer.run()
         print(buffer.outputs["stdout"].value)
 
@@ -375,9 +394,11 @@ class GrassCoreAPI:
         # (1) get only rivers
         # copy to new map to work
         copy(arc_map_name, arc_map_copy_name, 'vect', overwrite=True)  # get a copy from map
+        GrassCoreAPI._debug_lines.append('copy {} {}'.format(arc_map_name, arc_map_copy_name))
 
         # extract only [TypeID]=6 in WEAPArc map
-        extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, quiet=quiet, verbose=verbose)
+        #extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, quiet=quiet, verbose=verbose)
+        extract = Module('v.extract', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
         extract.inputs.input = arc_map_copy_name
         extract.outputs.output = rivers_map_name
 
@@ -386,7 +407,10 @@ class GrassCoreAPI:
         arc_river_code = conf_tmp.arc_type_id['river']
         extract.inputs.where = "{}={}".format(arc_type_id, arc_river_code)  # "TypeID=6"
         extract.inputs.type = 'line'
-        # print(extract.get_bash())
+
+        debug_line = extract.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         extract.run()
         # print(extract.outputs["stdout"].value)
         # print(extract.outputs["stderr"].value)
@@ -394,13 +418,17 @@ class GrassCoreAPI:
         # (2) apply river tree to divide them in segments
         segments_str = root_node.get_segments_format()
 
-        vsegment = Module('v.segment', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose,
-                          quiet=quiet)
+        #vsegment = Module('v.segment', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True, verbose=verbose, quiet=quiet)
+        vsegment = Module('v.segment', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
         vsegment.inputs.input = rivers_map_name
-        vsegment.inputs.stdin = segments_str
         vsegment.outputs.output = output_map
 
-        # print(vsegment.get_bash())
+        if segments_str:
+            vsegment.inputs.stdin = segments_str
+
+        debug_line = vsegment.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         vsegment.run()
 
         return _err, _errors
@@ -416,8 +444,7 @@ class GrassCoreAPI:
         verbose = cls.verbose if cls.verbose is not None else verbose
         quiet = cls.quiet if cls.quiet is not None else quiet
 
-        vtransform = Module('v.transform', run_=False, stdout_=PIPE, stderr_=PIPE, verbose=verbose, overwrite=True,
-                            quiet=quiet)
+        vtransform = Module('v.transform', run_=False, stdout_=PIPE, stderr_=PIPE, overwrite=True)
 
         vtransform.inputs.input = map_name
         vtransform.outputs.output = map_name_out
@@ -425,7 +452,9 @@ class GrassCoreAPI:
         vtransform.inputs.yshift = y_offset_ll
         vtransform.inputs.zrotation = z_rotation
 
-        # print(vtransform.get_bash())
+        debug_line = vtransform.get_bash()
+        GrassCoreAPI._debug_lines.append(debug_line)
+
         vtransform.run()
 
         return _err, _errors

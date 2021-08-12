@@ -25,6 +25,8 @@ def add_grass_to_path():
         msg_not_found = "It can be found GRASS (grass78) program. Please add absolute path of python executable and 'python/lib'."
         print("[ERROR] {}",format(msg_not_found))
 
+    return CONFIG_GRASS_PATH
+
 
 def print_summary(summary: SummaryInfo):
     prefix = summary.get_prefix()
@@ -307,9 +309,16 @@ class CmdInterface(InterfaceApp):
         try:
             _err, _errors = self.app.run()
         except subprocess.CalledProcessError as e:
-            msg_errors = '\n'.join(e.output.replace('\\n', '\n').split('\n'))
+            if e.output:
+                msg_error = e.output
+            elif e.msg:
+                msg_error = e.msg
+            else:
+                msg_error = ''
+
+            msg_errors = '\n'.join(msg_error.replace('\\n', '\n').split('\n'))
             ui.info('\n\r', ui.bold, ui.red, ':: ', ui.faint, ui.darkred, '{}. \n\r\n\r'.format(msg_errors))
-            ui.info('\n\r', ui.bold, ui.red, ':: ', ui.faint, ui.darkred, 'EXECUTION FINISHED')
+            ui.info('\n\r', ui.bold, ui.red, ':: ', ui.faint, ui.darkred, 'ERROR - EXECUTION FINISHED')
 
             sys.exit(-1)
 
@@ -420,7 +429,7 @@ def main(location: str):
 
 
 if __name__ == "__main__":
-    add_grass_to_path()
+    # add_grass_to_path()
     location = UtilMisc.generate_word(length=5, prefix=InterfaceApp.config["COMMAND INTERFACE"]["location_prefix"])
 
     main(location=location)
