@@ -340,7 +340,7 @@ def main(location: str):
 
     # get or make the linkage-in shapefile
     if flags['g']:  # make linkage grid using MODFLOW model and flopy
-        linkage_in_name_default = 'linkage_in.shp'
+        linkage_in_name_default = 'linkage_in_from_model.shp'
 
         linkage_in_folder = options['linkage_in_folder']
         gw_model_file = options['gw_model']
