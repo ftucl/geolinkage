@@ -278,7 +278,10 @@ class AppKernel(MapFileManagerProtocol):
         # add columns in config
         # cols = self.get_linkage_out_columns()
         f_ds_type = self.demand_site_processor.get_feature_type()
-        cols = self.get_columns_to_export(with_type=True) + self.get_info_columns_to_export(feature_type=f_ds_type, with_type=True)
+        cols_info = self.demand_site_processor.get_info_columns_to_export(feature_type=f_ds_type, with_type=True)
+        cols_main = self.get_columns_to_export(with_type=True)
+        
+        cols = cols_main + cols_info        
         for col_name, col_type in cols:
             if col_name not in (row_field, col_field):
                 cols_sqlite.add([col_name], [col_type])
@@ -489,7 +492,7 @@ class AppKernel(MapFileManagerProtocol):
         # Rivers Logic
         # -------------------------------------------------------------------------------
         # import files to vector maps
-        self.river_processor.run(linkage_name=linkage_name)
+        # self.river_processor.run(linkage_name=linkage_name)
 
         # -------------------------------------------------------------------------------
         # General Logic

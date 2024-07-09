@@ -16,7 +16,7 @@ execute_geolinkage(){
     echo "Executing program: $SCRIPT_INTERFACE"
     echo "Input Params: $PARAMS"
     echo ""
-    python3 CmdInterface.py $PARAMS
+    python3.8 CmdInterface.py $PARAMS
     echo ""
 }
 
