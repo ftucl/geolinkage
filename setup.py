@@ -2,8 +2,9 @@
 
 import sys
 import subprocess
-import pkg_resources
 import importlib
+import importlib.metadata
+import re
 
 
 CONFIG_GRASS_PATH = ''
@@ -72,10 +73,14 @@ class SetupStatus:
 
     def get_missed_packages(self):
         return self.packages_missed
+    
+    def pkg_name_normalize(self, package):
+        pkg = re.sub(r"[-_.]+", "-", package).lower()
+        return pkg
 
     def check_packages(self):
         required = self.PACKAGES.keys()
-        package_installed = {pkg.key for pkg in pkg_resources.working_set}
+        package_installed = {self.pkg_name_normalize(x.name) for x in importlib.metadata.distributions()}
         self.packages_missed = required - package_installed
 
         for package in required:
@@ -199,10 +204,11 @@ def set_ld_library():
 
 def grass_check():
     try:
-        CONFIG_GRASS_PATH = subprocess.check_output(["grass78", "--config", "path"]).decode("utf-8").strip()
+        CONFIG_GRASS_PATH = subprocess.run(["grass78", "--config", "path"], shell=True)
         is_grass = True
     except subprocess.CalledProcessError:
         is_grass = False
+
     except FileNotFoundError:
         is_grass = False
 
@@ -212,7 +218,7 @@ def grass_check():
 def pip_check():
     try:
         msg_info = '[*] pip is installed.'
-        subprocess.check_call([sys.executable, "-m", "pip", '-h'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.run([sys.executable, "-m", "pip", '-h'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         is_pip = True
     except subprocess.CalledProcessError:
         is_pip = False
@@ -250,7 +256,6 @@ def setup_app():
     import os
 
     setup_status = SetupStatus()
-
     # Required checks
     # Grass Requirement
     is_grass = grass_check()
@@ -297,7 +302,6 @@ def setup_app():
         packages_missed = setup_status.get_missed_packages()
         for package in packages_missed:
             import_package(package, summary=setup_status)
-
     summary_text = setup_status.get_summary()
     print(summary_text)
 
