@@ -1,4 +1,10 @@
 {
+    "GRASS VERSION" : {
+        "major": 8,
+        "minor": 3,
+        "bin_name": "grass83"
+    },
+    
     "DEFAULT MAP NAMES": {
         "LINKAGE FINAL MAP": "linkage_final_new",
         "RIVER SEGMENTS MAP": "arc_segments",
