@@ -352,10 +352,10 @@ class InterfaceApp:
                 self.node_file = node_file
                 self.arc_file = arc_file
         else:
-            self.errors.append('linkage_in file is requerid') if not linkage_in_file else None
-            self.errors.append('linkage_out folder is requerid') if not linkage_out_folder else None
-            self.errors.append('node file is requerid') if not node_file else None
-            self.errors.append('arc file is requerid') if not arc_file else None
+            self.errors.append('linkage_in file is required') if not linkage_in_file else None
+            self.errors.append('linkage_out folder is required') if not linkage_out_folder else None
+            self.errors.append('node file is required') if not node_file else None
+            self.errors.append('arc file is required') if not arc_file else None
 
     def set_additional_paths(self, catchment_file: str, gw_file: str, ds_folder: str):
         # set in app

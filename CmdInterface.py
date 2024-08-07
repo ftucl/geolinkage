@@ -14,7 +14,7 @@ from utils.SummaryInfo import SummaryInfo
 
 def add_grass_to_path():
     try:
-        CONFIG_GRASS_PATH = subprocess.check_output(["grass78", "--config", "path"]).decode("utf-8").strip()
+        CONFIG_GRASS_PATH = subprocess.run(["grass78", "--config", "path"], shell=True)
     except FileNotFoundError as e:
         CONFIG_GRASS_PATH = None
 
