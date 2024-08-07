@@ -33,6 +33,10 @@ class SetupStatus:
             'version': '2.1.2',
             'module': 'pyshp'
         },
+        'numpy': {
+            'version': '1.21.2',
+            'module': 'numpy'
+        },
     }
 
     def __init__(self):
@@ -190,7 +194,7 @@ def import_package(package, summary):
     except ModuleNotFoundError:
         summary.add_process_msg(package=package, msg=msg_search, status='NOT FOUND')
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
+            subprocess.run([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
             summary.add_process_msg(package=package, msg=msg_install, status='INSTALLED')
         except subprocess.CalledProcessError:
             msg_info = 'Need to be manually installed: pip3 install {}=={}'.format(package, version)
