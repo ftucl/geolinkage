@@ -37,6 +37,10 @@ class SetupStatus:
             'version': '2.1.2',
             'module': 'pyshp'
         },
+        'numpy': {
+            'version': '1.21.2',
+            'module': 'numpy'
+        },
     }
 
     def __init__(self):
