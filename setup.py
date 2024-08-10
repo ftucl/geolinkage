@@ -18,7 +18,7 @@ class SetupStatus:
             'module': 'numpy'
         },
         'python-cli-ui': {
-            'version': '0.17.2',
+            'version': '0.7.5',
             'module': 'ui'
         },
         'grass-session': {
