@@ -13,6 +13,10 @@ CONFIG_GRASS_PATH = ''
 class SetupStatus:
     # Paquetes usados en la aplicacion
     PACKAGES = {
+        'numpy': {
+            'version': '1.26.4',
+            'module': 'numpy'
+        },
         'python-cli-ui': {
             'version': '0.7.5',
             'module': 'ui'
@@ -190,7 +194,7 @@ def import_package(package, summary):
     except ModuleNotFoundError:
         summary.add_process_msg(package=package, msg=msg_search, status='NOT FOUND')
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
+            subprocess.run([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
             summary.add_process_msg(package=package, msg=msg_install, status='INSTALLED')
         except subprocess.CalledProcessError:
             msg_info = 'Need to be manually installed: pip3 install {}=={}'.format(package, version)
@@ -204,7 +208,7 @@ def set_ld_library():
 
 def grass_check():
     try:
-        CONFIG_GRASS_PATH = subprocess.run(["grass78", "--config", "path"], shell=True)
+        CONFIG_GRASS_PATH = subprocess.run(["grass83", "--config", "path"], shell=True)
         is_grass = True
     except subprocess.CalledProcessError:
         is_grass = False
