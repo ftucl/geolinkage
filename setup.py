@@ -18,7 +18,7 @@ class SetupStatus:
             'module': 'numpy'
         },
         'python-cli-ui': {
-            'version': '0.7.5',
+            'version': '0.17.2',
             'module': 'ui'
         },
         'grass-session': {
@@ -26,7 +26,7 @@ class SetupStatus:
             'module': 'grass-session'
         },
         'flopy': {
-            'version': '3.3.1',
+            'version': '3.7.0',
             'module': 'flopy'
         },
         'anytree': {
@@ -34,7 +34,7 @@ class SetupStatus:
             'module': 'anytree'
         },
         'pyshp': {
-            'version': '2.1.2',
+            'version': '2.3.1',
             'module': 'pyshp'
         },
     }
