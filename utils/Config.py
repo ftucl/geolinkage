@@ -120,8 +120,6 @@ class ConfigApp:
             'MAPSET': mapset
         }
 
-        self.grass_version = config_data["GRASS_VERSION"]
-
         self.debug = debug
 
         # Default names in vector maps
