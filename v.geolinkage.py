@@ -420,6 +420,10 @@ def cleanup(location: str):
 def main(location: str):
     ui.setup(verbose=True, quiet=False, color="never")  # the kernel app code use ui package
 
+    app_sess = Session()
+    app_sess.open(gisdb="/tmp", location=location, create_opts="EPSG:{}".format('32718'))
+    options, flags = grass.parser()
+
     # init vars
     grass_vars = grass.parse_command("g.gisenv", flags="s")
 
@@ -519,11 +523,6 @@ def main(location: str):
 
 
 if __name__ == "__main__":
-    # location = Utils.generate_word(length=5, prefix='loc_')
-    location = 'loc_grass_tmp'
-
-    parser_sess = Session()
-    parser_sess.open(gisdb="/tmp", location='grass-temporal', create_opts="EPSG:{}".format('32718'))
-    options, flags = grass.parser()
+    location =  UtilMisc.generate_word(length=5, prefix=InterfaceApp.config["COMMAND INTERFACE"]["location_prefix"])
     main(location=location)
-    parser_sess.close()
+
