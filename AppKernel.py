@@ -297,6 +297,8 @@ class AppKernel(MapFileManagerProtocol):
         # consolidate [catchment_cells], [gw_cells], [river_cells] and [demand_site_cells]
         _, _ = self.get_consolidate_cells()
 
+
+        # DB connection ? 
         linkage_map = VectorTopo(linkage_name)
         linkage_map.open('rw')
 
