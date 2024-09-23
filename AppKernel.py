@@ -7,6 +7,7 @@ from utils.Config import ConfigApp
 from processors.DemandSiteProcessor import DemandSiteProcess
 from processors.GeoKernel import GeoKernel
 from processors.GroundwaterProcessor import GroundwaterProcess
+from processors.GeoCheck import GeoCheck
 from utils.Protocols import MapFileManagerProtocol
 from processors.RiverProcessor import RiverProcess
 from utils.Errors import ErrorManager
@@ -110,6 +111,8 @@ class AppKernel(MapFileManagerProtocol):
         self.groundwater_processor = GroundwaterProcess(geo=self.geo_processor, config=self.config, err=self._err)
         self.demand_site_processor = DemandSiteProcess(geo=self.geo_processor, config=self.config, err=self._err)
         self.river_processor = RiverProcess(geo=self.geo_processor, config=self.config, err=self._err)
+
+        self.geo_checker = GeoCheck(config=self.config, error=self._err, check=True)
         self.consolidate_cells = None
 
         self._feature_type = self.config.type_names[self.__class__.__name__]
@@ -224,6 +227,10 @@ class AppKernel(MapFileManagerProtocol):
 
     def get_consolidate_cells(self):
         _err, _errors = False, []
+
+        # the process should be done only once.
+        if self.consolidate_cells:
+            return _err, _errors
 
         alldata = [self.catchment_processor.get_cell_keys(), self.groundwater_processor.get_cell_keys(),
                    self.demand_site_processor.get_cell_keys(), self.river_processor.get_cell_keys()]
@@ -495,6 +502,13 @@ class AppKernel(MapFileManagerProtocol):
         # -------------------------------------------------------------------------------
         # import files to vector maps
         # self.river_processor.run(linkage_name=linkage_name)
+
+        # -------------------------------------------------------------------------------
+        # GeoChecker Logic
+        # -------------------------------------------------------------------------------
+        # check if there are errors in the geometry
+        # should i provide the necesary data here ? 
+        self.geo_checker.run()
 
         # -------------------------------------------------------------------------------
         # General Logic
