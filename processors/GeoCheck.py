@@ -1,11 +1,10 @@
-from GeoKernel import GeoKernel
 from AppKernel import AppKernel
 from utils.Config import ConfigApp
 from utils.Errors import ErrorManager
 from utils.SummaryInfo import SummaryInfo
 
 class GeoCase:
-    def __init__(self, base_feature_type: str, superior_feature_type: str, config: ConfigApp, one_to_one: bool = False,):
+    def __init__(self, base_feature_type: str, superior_feature_type: str, config: ConfigApp, one_to_one: bool = False):
         self.base_name = base_feature_type
         self.base_id = config.nodes_type_id[base_feature_type]
         self.super_name = superior_feature_type
@@ -100,16 +99,13 @@ class GeoCheck:
         for case in self._cases:
             case.set_arcs_and_nodes(arcs, nodes)
 
-    def set_consolidate_cells(self, app_kernel: AppKernel):
-        if self._consolidate_cells:
-            return self._consolidate_cells
-        else:
-            self._consolidate_cells = app_kernel.get_consolidate_cells()
-            return self._consolidate_cells
+    def set_consolidate_cells(self, consolidate_cells):
+        self._consolidate_cells = consolidate_cells
+        return self._consolidate_cells
     
     # Meant to be called by AppKernel when all the other processors are finished.
-    def setup(self, app_kernel: AppKernel, arcs, nodes):
-        self.set_consolidate_cells(app_kernel)
+    def setup(self, consolidate_cells, arcs, nodes):
+        self.set_consolidate_cells(consolidate_cells)
         self.set_arcs_and_nodes(arcs, nodes)
 
     def append_err(self, typ: str = None, msg: str = None, msgs: list = (), is_warn: bool = False, code: str = ''):
