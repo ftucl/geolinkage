@@ -5,14 +5,17 @@ from utils.Errors import ErrorManager
 from utils.SummaryInfo import SummaryInfo
 
 class GeoCase:
-    def __init__(self, base_feature_type: str, superior_feature_type: str, config: ConfigApp):
+    def __init__(self, base_feature_type: str, superior_feature_type: str, config: ConfigApp, one_to_one: bool = False,):
         self.base_name = base_feature_type
         self.base_id = config.nodes_type_id[base_feature_type]
         self.super_name = superior_feature_type
         self.super_id = config.nodes_type_id[superior_feature_type]
+        # self.one_to_one = one_to_one
         self.arcs = None
         self.nodes = None
         self.connectivity = {}
+        self.errors = {}
+
         self.set_connectivity()
 
     def set_arcs_and_nodes(self, arcs, nodes):
@@ -59,15 +62,23 @@ class GeoCase:
 
     def check_cell(self, cell: dict):
         # This should be working, but i don't know if the names are the same as the ones in the connectivity matrix
-        err = []
-        
         base_element = cell[self.base_name]
         super_element = cell[self.super_name]
+        
+        ## meant to treat the case where the existence of an object implies the existence of another (GW-CATCH)
+        ## not sure if necessary
+        # if self.one_to_one and (not base_element or not super_element):
+        #     err.append(f"La celda {cell['cell_id']} no tiene un elemento {self.base_name} o {self.super_name} asociado.")
 
-        if base_element not in self.connectivity:
-            err.append(f"Element {base_element} is not connected to {self.super_name} in the WEAP model.")
+        check = super_element in self.connectivity[base_element]
 
-        return super_element in self.connectivity[base_element], err
+        if not check:
+            if not self.errors.get(base_element):
+                self.errors[base_element] = [super_element]
+            else:
+                self.errors[base_element].append(super_element)
+
+        return check
     
 class GeoCheck:
     def __init__(self,  config: ConfigApp, error: ErrorManager, check: bool):
@@ -77,7 +88,7 @@ class GeoCheck:
         self._consolidate_cells = None
         self.summary = SummaryInfo(prefix="GeoCheck", errors=error, config=config)
         self.arcs = None
-        self.nodes = None  
+        self.nodes = None 
         self._cases = [
                     GeoCase("groundwater", "demand_site", config),
                     GeoCase("groundwater", "catchment", config),
@@ -95,16 +106,11 @@ class GeoCheck:
         else:
             self._consolidate_cells = app_kernel.get_consolidate_cells()
             return self._consolidate_cells
-
-    # Check the cells from AppKernel for errors.
-    def check_geometry(self):
-        if not self._check:
-            return
-        for _, info in self._consolidate_cells.items():
-            for case in self._cases:
-                status, err = case.check_cell(info)
-                if not status:
-                    self.append_err(msg=err, typ="gc", is_warn=True) #code="GC-01"?
+    
+    # Meant to be called by AppKernel when all the other processors are finished.
+    def setup(self, app_kernel: AppKernel, arcs, nodes):
+        self.set_consolidate_cells(app_kernel)
+        self.set_arcs_and_nodes(arcs, nodes)
 
     def append_err(self, typ: str = None, msg: str = None, msgs: list = (), is_warn: bool = False, code: str = ''):
         typ = typ if typ else "gc"
@@ -122,5 +128,23 @@ class GeoCheck:
                 for msg_str in msgs:
                     self._err.append(msg=msg_str, typ=typ, code=code)
 
+    # Check the cells from AppKernel for errors.
+    def check_geometry(self):
+        if not self._check:
+            return
+        for _, info in self._consolidate_cells.items():
+            for case in self._cases:
+                case.check_cell(info)
+        
+        for case in self._cases:
+            for base_element, super_elements in case.errors.items():
+                msg = f"El elemento {base_element} del tipo {case.base_name} no está conectado a los elementos {super_elements} de tipo {case.super_name}."
+                self.append_err(msg=msg, is_warn=False)
+
     def run(self):
-        self.check_geometry()
+        if self._check and self._consolidate_cells and self.arcs and self.nodes:
+            print("HOLA")
+            # self.check_geometry()
+        else: 
+            print("HOLAn't")
+            self.append_err(msg="GeoCheck couldn't run, missing data.", is_warn=False)

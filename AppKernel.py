@@ -507,7 +507,8 @@ class AppKernel(MapFileManagerProtocol):
         # GeoChecker Logic
         # -------------------------------------------------------------------------------
         # check if there are errors in the geometry
-        # should i provide the necesary data here ? 
+        # should i provide the necessary data here ? 
+        self.geo_checker.setup(app_kernel=self, arcs=self.geo_processor.arcs, nodes=self.geo_processor.nodes)
         self.geo_checker.run()
 
         # -------------------------------------------------------------------------------
