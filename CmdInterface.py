@@ -199,6 +199,10 @@ class CmdInterface(InterfaceApp):
         summary = self.app.get_geo_summary()
         print_summary(summary)
 
+    def print_geo_check_summary(self):
+        summary = self.app.get_geo_check_summary()
+        print_summary(summary)
+
     def print_errors(self):
         if self.errors:
             for err in self.errors:
@@ -423,6 +427,7 @@ def main(location: str):
             interface_app.print_gw_summary()
             interface_app.print_ds_summary()
             interface_app.print_river_summary()
+            interface_app.print_geo_check_summary()
     else:
         parser.print_help(sys.stderr)
         # interface_app.print_errors()

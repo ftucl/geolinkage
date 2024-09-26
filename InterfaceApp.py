@@ -267,6 +267,10 @@ class InterfaceApp:
     def print_geo_summary(self):
         pass
 
+    @abstractmethod
+    def print_geo_check_summary(self):
+        pass
+
     def set_gw_model(self, gw_model_file: str):
         self.make_grid = True
 
