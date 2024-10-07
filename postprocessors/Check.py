@@ -21,6 +21,7 @@ class Check(ABC):
         if feature:
             for f in feature["data"]:
                 names.append(f["name"])
+            return names
         else: 
             return None
 
