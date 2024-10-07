@@ -1,4 +1,4 @@
-from Check import Check
+from postprocessors.Check import Check
 
 class SuperpositionCheck(Check):
     def __init__(self, base_feature, secondary_feature, config):

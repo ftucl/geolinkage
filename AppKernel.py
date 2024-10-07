@@ -7,7 +7,8 @@ from utils.Config import ConfigApp
 from processors.DemandSiteProcessor import DemandSiteProcess
 from processors.GeoKernel import GeoKernel
 from processors.GroundwaterProcessor import GroundwaterProcess
-from processors.GeoCheck import GeoCheck
+from postprocessors.GeoChecker import GeoChecker
+from postprocessors.SuperpositionCheck import SuperpositionCheck
 from utils.Protocols import MapFileManagerProtocol
 from processors.RiverProcessor import RiverProcess
 from utils.Errors import ErrorManager
@@ -112,9 +113,14 @@ class AppKernel(MapFileManagerProtocol):
         self.demand_site_processor = DemandSiteProcess(geo=self.geo_processor, config=self.config, err=self._err)
         self.river_processor = RiverProcess(geo=self.geo_processor, config=self.config, err=self._err)
 
-        self.geo_checker = GeoCheck(config=self.config, error=self._err, check=True)
+        self.geo_checker = GeoChecker(checks=
+                        [
+                            SuperpositionCheck(base_feature='groundwater', secondary_feature='catchment', config=self.config),
+                            SuperpositionCheck(base_feature='groundwater', secondary_feature='demand_site', config=self.config)
+                        ]
+            , config= self.config)
+        
         self.consolidate_cells = None
-
         self._feature_type = self.config.type_names[self.__class__.__name__]
 
         self.stats = {}

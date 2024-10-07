@@ -20,6 +20,9 @@ class GeoChecker:
     def set_consolidate_cells(self, cells):
         self.cells = cells
 
+    def get_summary(self):
+        return self.summary
+
     def print_checks(self):
         checks_str = ''
         for check in self.checks:
