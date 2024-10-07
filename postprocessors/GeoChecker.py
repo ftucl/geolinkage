@@ -1,10 +1,17 @@
+from utils.SummaryInfo import SummaryInfo
+from utils.Errors import ErrorManager
+
 class GeoChecker:
-    def __init__(self):
+    def __init__(self, checks, config):
         self.arcs = None
         self.nodes = None
         self.cells = None
 
-        self.checks = []
+        self.checks = checks
+
+        self.config = config
+        self.error = ErrorManager(config)
+        self.summary = SummaryInfo('GeoChecker', self.error, config)
 
     def set_arcs_and_nodes(self, arcs, nodes):
         self.arcs = arcs
@@ -12,6 +19,17 @@ class GeoChecker:
     
     def set_consolidate_cells(self, cells):
         self.cells = cells
+
+    def print_checks(self):
+        checks_str = ''
+        for check in self.checks:
+            checks_str += '     [{}]: {} \n'.format(check.get_name(), check.get_description())
+        return checks_str
+    
+    def checking_errors(self):
+        for check in self.checks:
+            for error in check.get_errors():
+                self.error.append(msg= error, typ= 'gc', is_warn= True)
         
     def setup(self, consolidate_cells, arcs, nodes):
         self.set_consolidate_cells(consolidate_cells)
@@ -25,9 +43,12 @@ class GeoChecker:
         #        - 'y': y-axis position of the node.
         #        - 'cat': node internal ID (used by 'pygrass library').
 
+
         for node_id, node in self.nodes.items():
             for check in self.checks:
                 check.node_init_operation(node_id ,node)
+        
+        self.summary.set_process_line("init_check_node", check_error = False)
 
     def init_arcs_loop(self):
         # Arc structure
@@ -38,6 +59,8 @@ class GeoChecker:
         for arc_id , arc in self.arcs.items():
             for check in self.checks:
                 check.arc_init_operation(arc_id, arc)
+        
+        self.summary.set_process_line("init_check_arc", check_error = False)
         
     def init_cells_loop(self):
         # Cell structure
@@ -51,18 +74,28 @@ class GeoChecker:
             for check in self.checks:
                 check.cell_init_operation(cell_id, cell)
 
+        self.summary.set_process_line("init_check_cell", check_error = False)
+
     def check_nodes_loop(self):
         for node_id, node in self.nodes.items():
             for check in self.checks:
                 check.node_check_operation(node_id, node)
+        
+        self.summary.set_process_line("perform_check_node", check_error = False)
+
     def check_arcs_loop(self):
         for arc_id, arc in self.arcs.items():
             for check in self.checks:
                 check.arc_check_operation(arc_id, arc)
+        
+        self.summary.set_process_line("perform_check_arc", check_error = False)
+
     def check_cells_loop(self):
         for cell_id, cell in self.cells.items():
             for check in self.checks:
                 check.cell_check_operation(cell_id, cell)
+
+        self.summary.set_process_line("perform_check_cell", check_error = False)
 
     def build_checks(self):
         self.init_arcs_loop()
@@ -75,9 +108,16 @@ class GeoChecker:
         self.check_cells_loop()
         
     def run(self):
+        self.summary.set_input_param('checks', self.print_checks())
         # Initializing secuence
         self.build_checks()
         # Checking secuence
         self.perform_checks()
         # Return errors.
+        self.checking_errors()
+        # Here somebody should ask for the summary
+
+
+
+        
 
