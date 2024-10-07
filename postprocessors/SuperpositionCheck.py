@@ -10,7 +10,7 @@ class SuperpositionCheck(Check):
         self.secondary_feature_type_id = config.nodes_type_id[self.secondary_feature]
 
         self.connections = {}
-        self.nodes = None
+        self.nodes = {}
         self.connection_error = {} 
 
     # Space for auxiliary functions specific to this class.

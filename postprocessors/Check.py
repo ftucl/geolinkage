@@ -58,7 +58,6 @@ class Check(ABC):
     def cell_check_operation(self, cell_id, cell):
         pass
     
-    @abstractmethod
     def get_errors(self):
         for value in self.errors:
             yield value
