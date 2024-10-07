@@ -118,7 +118,9 @@ class AppKernel(MapFileManagerProtocol):
                             SuperpositionCheck(base_feature='groundwater', secondary_feature='catchment', config=self.config),
                             SuperpositionCheck(base_feature='groundwater', secondary_feature='demand_site', config=self.config)
                         ]
-            , config= self.config)
+            , config= self.config
+            , img_path= "home/ato/geolinkage_project/imgs/"
+            )
         
         self.consolidate_cells = None
         self._feature_type = self.config.type_names[self.__class__.__name__]

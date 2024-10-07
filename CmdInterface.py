@@ -296,6 +296,7 @@ class CmdInterface(InterfaceApp):
 
             'linkage_in': args['linkage_in'][0] if args['linkage_in'] else '',
             'linkage_out_folder': args['linkage_out_folder'][0] if args['linkage_out_folder'] else '',
+            # 'visualization': args['visualization'][0] if args['visualization'] else '', 
             'node': args['node'][0] if args['node'] else '',
             'arc': args['arc'][0] if args['arc'] else '',
             'catchment': args['catchment'][0] if args['catchment'] else '',
@@ -305,7 +306,10 @@ class CmdInterface(InterfaceApp):
             'gw_field': args['gw_field'][0] if args['gw_field'] else 'GW',
             'ds_field': args['ds_field'][0] if args['ds_field'] else 'DS',
         }
-        flags = {'g': args['g'] if args['g'] else False}
+        flags = {
+            'g': args['g'] if args['g'] else False,
+            'c': args['c'] if args['c'] else False
+                 }
 
         return options, flags, my_parser
 

@@ -1,4 +1,5 @@
 from postprocessors.Check import Check
+import numpy as np
 
 class SuperpositionCheck(Check):
     def __init__(self, base_feature, secondary_feature, config):
@@ -20,7 +21,7 @@ class SuperpositionCheck(Check):
             self.connection_error[base_element] = set()
         self.connection_error[base_element].add(super_element)
 
-    def make_errors_dict(self):
+    def make_errors(self):
         for base, secondaries in self.connection_error.items():
             self.errors.append(f"El elemento {base} del tipo {self.base_feature} no está conectado a los elementos {secondaries} de tipo {self.secondary_feature}.")
 
@@ -35,6 +36,31 @@ class SuperpositionCheck(Check):
             return secondary_name in self.connections[base_name]
         return False
 
+    def make_connection_matrix(self):
+            base_labels = []
+            secondary_labels = []
+            for base, secondaries in self.connections.items():
+                base_labels.append(base)
+                secondary_labels.extend(secondaries)
+            
+            matrix = np.zeros((len(base_labels), len(secondary_labels), 3), dtype=float)
+
+            for i, base in enumerate(base_labels):
+                for j, secondary in enumerate(secondary_labels):
+                    if secondary in self.connections[base]:
+                        matrix[i][j] = (1,1,1)
+            
+            # Add the errors in red
+            for base, secondaries in self.connection_error.items():
+                i = base_labels.index(base)
+                for secondary in secondaries:
+                    j = secondary_labels.index(secondary)
+                    matrix[i][j] = (1,0,0)
+
+            # this made a simple connection matrix
+            return matrix, base_labels, secondary_labels
+
+
     # We use a structure to save the connections between nodes.
     # We use another one to save a translation between the node ID and the node name.
 
@@ -43,6 +69,10 @@ class SuperpositionCheck(Check):
     
     def get_description(self):
         return "Check if the base feature is superposed with the secondary feature."
+
+    def plot(self, visualizator):
+        matrix, base_labels, secondary_labels= self.make_connection_matrix()
+        visualizator.write_matrix_img(matrix, "superposition_matrix_"+self.base_feature+"_"+self.secondary_feature, base_labels, secondary_labels)
 
     def arc_init_operation(self, arc_id, arc):
         pass
@@ -76,6 +106,8 @@ class SuperpositionCheck(Check):
             for secondary_name in secondary_element:
                 if not self.check_connection(base_name, secondary_name):
                     self.add_error(base_name, secondary_name)
+        
+        self.make_errors()
         
                     
 

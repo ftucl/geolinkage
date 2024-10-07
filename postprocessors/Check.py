@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from utils.Visualizator import Visualizator
 
 class Check(ABC):
     def __init__(self):
@@ -21,9 +22,7 @@ class Check(ABC):
         if feature:
             for f in feature["data"]:
                 names.append(f["name"])
-            return names
-        else: 
-            return None
+        return names
 
     # Abstract methods
 
@@ -58,7 +57,12 @@ class Check(ABC):
     @abstractmethod
     def cell_check_operation(self, cell_id, cell):
         pass
-    
+
+    @abstractmethod
+    def plot(self, visualizator):
+        pass
+
     def get_errors(self):
-        for value in self.errors:
-            yield value
+        return self.errors
+    
+    

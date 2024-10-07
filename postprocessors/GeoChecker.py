@@ -1,8 +1,9 @@
 from utils.SummaryInfo import SummaryInfo
 from utils.Errors import ErrorManager
+from utils.Visualizator import Visualizator
 
 class GeoChecker:
-    def __init__(self, checks, config):
+    def __init__(self, checks, config, img_path):
         self.arcs = None
         self.nodes = None
         self.cells = None
@@ -12,7 +13,8 @@ class GeoChecker:
         self.config = config
         self.error = ErrorManager(config)
         self.summary = SummaryInfo('GeoChecker', self.error, config)
-
+        self.visualizator = Visualizator(img_path)
+        
     def set_arcs_and_nodes(self, arcs, nodes):
         self.arcs = arcs
         self.nodes = nodes
@@ -32,6 +34,7 @@ class GeoChecker:
     def checking_errors(self):
         for check in self.checks:
             for error in check.get_errors():
+                print(error)
                 self.error.append(msg= error, typ= 'gc', is_warn= True)
         
     def setup(self, consolidate_cells, arcs, nodes):
@@ -109,6 +112,10 @@ class GeoChecker:
         self.check_arcs_loop()
         self.check_nodes_loop()
         self.check_cells_loop()
+
+    def plot_checks(self):
+        for check in self.checks:
+            check.plot(self.visualizator)
         
     def run(self):
         self.summary.set_input_param('checks', self.print_checks())
@@ -119,6 +126,7 @@ class GeoChecker:
         # Return errors.
         self.checking_errors()
         # Here somebody should ask for the summary
+        self.plot_checks()
 
 
 

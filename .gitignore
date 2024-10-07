@@ -3,4 +3,6 @@ test.py
 examples/azapa/
 */__pycache__/
 __pycache__/
-utils/__pycache__/
+/pycache/*
+utils/__pycache__/*
+/imgs/
