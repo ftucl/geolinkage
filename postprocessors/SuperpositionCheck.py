@@ -34,7 +34,9 @@ class SuperpositionCheck(Check):
     def check_connection(self, base_name, secondary_name):
         if self.connections.get(base_name):
             return secondary_name in self.connections[base_name]
-        return False
+        
+        # not sure, aquí manejo el error de si algo no existe en la lista de conexiones.
+        return True
 
     def make_connection_matrix(self):
             base_labels = []
@@ -52,6 +54,7 @@ class SuperpositionCheck(Check):
             
             # Add the errors in red
             for base, secondaries in self.connection_error.items():
+
                 i = base_labels.index(base)
                 for secondary in secondaries:
                     j = secondary_labels.index(secondary)

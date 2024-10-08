@@ -308,7 +308,7 @@ class CmdInterface(InterfaceApp):
         }
         flags = {
             'g': args['g'] if args['g'] else False,
-            'c': args['c'] if args['c'] else False
+            # 'c': args['c'] if args['c'] else False
                  }
 
         return options, flags, my_parser
