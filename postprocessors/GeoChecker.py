@@ -34,7 +34,6 @@ class GeoChecker:
     def checking_errors(self):
         for check in self.checks:
             for error in check.get_errors():
-                print(error)
                 self.error.append(msg= error, typ= 'gc', is_warn= True)
         
     def setup(self, consolidate_cells, arcs, nodes):

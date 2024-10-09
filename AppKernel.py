@@ -119,7 +119,7 @@ class AppKernel(MapFileManagerProtocol):
                             SuperpositionCheck(base_feature='groundwater', secondary_feature='demand_site', config=self.config)
                         ]
             , config= self.config
-            , img_path= "home/ato/geolinkage_project/imgs/"
+            , img_path= "/home/ato/geolinkage_project/imgs/" #hardcodeado
             )
         
         self.consolidate_cells = None
