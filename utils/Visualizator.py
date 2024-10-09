@@ -7,7 +7,9 @@ class Visualizator:
         self.directory_path = directory_path
 
     def write_matrix_img(self, matrix, name, row_labels=None, column_labels=None, cmap='viridis'):
-        ax = sns.heatmap(matrix, cmap=cmap, xticklabels=column_labels, yticklabels=row_labels, linewidths=0.5 , fontsize=8)
+
+        sns.set_theme(font_scale=0.5)
+        ax = sns.heatmap(matrix, cmap=cmap, xticklabels=column_labels, yticklabels=row_labels, linewidths=0.5)
 
         figure = ax.get_figure()
 
