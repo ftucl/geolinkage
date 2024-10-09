@@ -43,7 +43,9 @@ class SuperpositionCheck(Check):
             secondary_labels = []
             for base, secondaries in self.connections.items():
                 base_labels.append(base)
-                secondary_labels.extend(secondaries)
+                for secondary in secondaries:
+                    if secondary not in secondary_labels:
+                        secondary_labels.append(secondary)
             
             matrix = np.zeros((len(base_labels), len(secondary_labels)), dtype=float)
 
@@ -75,7 +77,8 @@ class SuperpositionCheck(Check):
 
     def plot(self, visualizator):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
-        visualizator.write_matrix_img(matrix, "superposition_matrix_"+self.base_feature+"_"+self.secondary_feature, base_labels, secondary_labels, cmap='rocket')
+        visualizator.write_matrix_img(matrix, "superposition_matrix_"+self.base_feature+"_"+self.secondary_feature,
+                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
 
     def arc_init_operation(self, arc_id, arc):
         pass
