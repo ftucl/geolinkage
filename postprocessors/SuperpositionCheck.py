@@ -45,12 +45,12 @@ class SuperpositionCheck(Check):
                 base_labels.append(base)
                 secondary_labels.extend(secondaries)
             
-            matrix = np.zeros((len(base_labels), len(secondary_labels), 3), dtype=float)
+            matrix = np.zeros((len(base_labels), len(secondary_labels)), dtype=float)
 
             for i, base in enumerate(base_labels):
                 for j, secondary in enumerate(secondary_labels):
                     if secondary in self.connections[base]:
-                        matrix[i][j] = (1,1,1)
+                        matrix[i][j] = 1
             
             # Add the errors in red
             for base, secondaries in self.connection_error.items():
@@ -58,7 +58,7 @@ class SuperpositionCheck(Check):
                 i = base_labels.index(base)
                 for secondary in secondaries:
                     j = secondary_labels.index(secondary)
-                    matrix[i][j] = (1,0,0)
+                    matrix[i][j] = 0.5
 
             # this made a simple connection matrix
             return matrix, base_labels, secondary_labels
@@ -75,7 +75,7 @@ class SuperpositionCheck(Check):
 
     def plot(self, visualizator):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
-        visualizator.write_matrix_img(matrix, "superposition_matrix_"+self.base_feature+"_"+self.secondary_feature, base_labels, secondary_labels)
+        visualizator.write_matrix_img(matrix, "superposition_matrix_"+self.base_feature+"_"+self.secondary_feature, base_labels, secondary_labels, cmap='rocket')
 
     def arc_init_operation(self, arc_id, arc):
         pass
