@@ -10,6 +10,9 @@ class SuperpositionCheck(Check):
         self.base_feature_type_id = config.nodes_type_id[self.base_feature]
         self.secondary_feature_type_id = config.nodes_type_id[self.secondary_feature]
 
+        self.base_names = []
+        self.secondary_names = []
+
         self.connections = {}
         self.nodes = {}
         self.connection_error = {} 
@@ -28,42 +31,37 @@ class SuperpositionCheck(Check):
     def set_connection(self, base_info, secondary_info):
         if self.connections.get(base_info["name"]):
             self.connections[base_info["name"]].append(secondary_info["name"])
-        else:
+        else: # Never reaches this branch because we create an empty list for every base element.
             self.connections[base_info["name"]] = [secondary_info["name"]]
 
     def check_connection(self, base_name, secondary_name):
         if self.connections.get(base_name):
             return secondary_name in self.connections[base_name]
         
-        # not sure, aquí manejo el error de si algo no existe en la lista de conexiones.
+        # Solo llega aquí si no existe el elemento base en WEAP.
         return True
 
     def make_connection_matrix(self):
-            base_labels = []
-            secondary_labels = []
-            for base, secondaries in self.connections.items():
-                base_labels.append(base)
-                for secondary in secondaries:
-                    if secondary not in secondary_labels:
-                        secondary_labels.append(secondary)
+            self.base_names = self.base_names
+            self.secondary_names = self.secondary_names
             
-            matrix = np.zeros((len(base_labels), len(secondary_labels)), dtype=float)
+            matrix = np.zeros((len(self.base_names), len(self.secondary_names)), dtype=float)
 
-            for i, base in enumerate(base_labels):
-                for j, secondary in enumerate(secondary_labels):
+            for i, base in enumerate(self.base_names):
+                for j, secondary in enumerate(self.secondary_names):
                     if secondary in self.connections[base]:
                         matrix[i][j] = 1
             
             # Add the errors in red
             for base, secondaries in self.connection_error.items():
 
-                i = base_labels.index(base)
+                i = self.base_names.index(base)
                 for secondary in secondaries:
-                    j = secondary_labels.index(secondary)
+                    j = self.secondary_names.index(secondary)
                     matrix[i][j] = 0.5
 
             # this made a simple connection matrix
-            return matrix, base_labels, secondary_labels
+            return matrix, self.base_names, self.secondary_names
 
 
     # We use a structure to save the connections between nodes.
@@ -87,6 +85,11 @@ class SuperpositionCheck(Check):
         type_id = node['type_id']
         if type_id == self.base_feature_type_id or type_id == self.secondary_feature_type_id:
             self.nodes[node_id] = node
+            if type_id == self.base_feature_type_id:
+                self.base_names.append(node["name"])
+                self.connections[node["name"]] = []
+            else: 
+                self.secondary_names.append(node["name"])
 
     def cell_init_operation(self, cell_id, cell):
         pass
