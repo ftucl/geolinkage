@@ -10,8 +10,8 @@ class SuperpositionCheck(Check):
         self.base_feature_type_id = config.nodes_type_id[self.base_feature]
         self.secondary_feature_type_id = config.nodes_type_id[self.secondary_feature]
 
-        self.base_names = []
-        self.secondary_names = []
+        self.base_names = {}
+        self.secondary_names = {}
         self.nodes = {}
 
         self.connections = {}
@@ -21,8 +21,10 @@ class SuperpositionCheck(Check):
 
     def add_error(self, base_element, super_element):
         if not self.connection_error.get(base_element):
-            self.connection_error[base_element] = set()
-        self.connection_error[base_element].add(super_element)
+            self.connection_error[base_element] = {}
+        if not self.connection_error[base_element].get(super_element):
+            self.connection_error[base_element][super_element] = 0
+        self.connection_error[base_element][super_element] += 1
 
     def make_errors(self):
         for base, secondaries in self.connection_error.items():
@@ -42,38 +44,40 @@ class SuperpositionCheck(Check):
         return True
 
     def make_connection_matrix(self):
-            self.base_names = self.base_names
-            self.secondary_names = self.secondary_names
-            
-            matrix = np.zeros((len(self.base_names), len(self.secondary_names)), dtype=float)
+            base_names = list(self.base_names.keys())
+            secondary_names = list(self.secondary_names.keys())
 
-            for i, base in enumerate(self.base_names):
-                for j, secondary in enumerate(self.secondary_names):
+            matrix = np.zeros((len(base_names), len(secondary_names)), dtype=float)
+
+            for i, base in enumerate(base_names):
+                for j, secondary in enumerate(secondary_names):
                     if secondary in self.connections[base]:
                         matrix[i][j] = 1
             
             # Add the errors in red
             for base, secondaries in self.connection_error.items():
-
-                i = self.base_names.index(base)
+                i = base_names.index(base)
                 for secondary in secondaries:
-                    j = self.secondary_names.index(secondary)
+                    j = secondary_names.index(secondary)
                     matrix[i][j] = 0.5
 
             # this made a simple connection matrix
-            return matrix, self.base_names, self.secondary_names
+            return matrix, base_names, secondary_names
     
     def make_area_matrix(self):
-        matrix = np.zeros((len(self.base_names), len(self.secondary_names)), dtype=float)
+        base_names = list(self.base_names.keys())
+        secondary_names = list(self.secondary_names.keys())
 
-        for i, base in enumerate(self.base_names):
-            for j, secondary in enumerate(self.secondary_names):
-                if self.connections.get(base):
-                    matrix[i][j] = self.connections[base].get(secondary, 0)
-        
-        return matrix, self.base_names, self.secondary_names
+        matrix = np.zeros((len(base_names), len(secondary_names)), dtype=float)
 
-
+        # Fill the matrix with the amount of cells in error for each connection
+        for base, secondaries in self.connection_error.items():
+            i = base_names.index(base)
+            for secondary in secondaries:
+                j = secondary_names.index(secondary)
+                matrix[i][j] = self.connection_error[base][secondary]
+                
+        return matrix, base_names, secondary_names
     # We use a structure to save the connections between nodes.
     # We use another one to save a translation between the node ID and the node name.
 
@@ -86,10 +90,13 @@ class SuperpositionCheck(Check):
     def plot(self, visualizator):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
-                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
+                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5,
+                                       title="Conexiones entre los elementos "+self.base_feature+" y "+self.secondary_feature+
+                                       ".\nEn rojo los elementos con errores.")
         matrix, base_labels, secondary_labels= self.make_area_matrix()
         visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
-                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
+                                       base_labels, secondary_labels, cmap='rocket_r', linewidth=0.5,
+                                       title="Cantidad de celdas de intersección de elementos "+self.base_feature+" y "+self.secondary_feature)
 
     def arc_init_operation(self, arc_id, arc):
         pass
@@ -99,10 +106,10 @@ class SuperpositionCheck(Check):
         if type_id == self.base_feature_type_id or type_id == self.secondary_feature_type_id:
             self.nodes[node_id] = node
             if type_id == self.base_feature_type_id:
-                self.base_names.append(node["name"])
+                self.base_names[node["name"]] = 0
                 self.connections[node["name"]] = dict()
             else: 
-                self.secondary_names.append(node["name"])
+                self.secondary_names[node["name"]] = 0
 
     def cell_init_operation(self, cell_id, cell):
         pass
@@ -125,7 +132,9 @@ class SuperpositionCheck(Check):
         secondary_element = self.get_cell_feature_names(cell, self.secondary_feature)
 
         for base_name in base_element:
+            self.base_names[base_name] += 1
             for secondary_name in secondary_element:
+                self.secondary_names[secondary_name] += 1
                 if not self.check_connection(base_name, secondary_name):
                     self.add_error(base_name, secondary_name)
                 else:
