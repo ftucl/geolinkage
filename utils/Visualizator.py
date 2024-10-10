@@ -9,10 +9,10 @@ class Visualizator:
     def write_matrix_img(self, matrix, name, row_labels=None, column_labels=None, cmap='viridis'
                         , cbar = False, linewidth = 0):
 
-        sns.set_theme(font_scale=0.5)
         ax = sns.heatmap(matrix, cmap=cmap, xticklabels=column_labels, yticklabels=row_labels, cbar=cbar,  linewidths=linewidth, linecolor='white')
 
         ax.set_xticklabels(ax.get_xticklabels(), fontsize = min(10, 100//len(column_labels)))
+        ax.set_yticklabels(ax.get_yticklabels(), fontsize = min(10, 100//len(row_labels)))
 
         figure = ax.get_figure()
 

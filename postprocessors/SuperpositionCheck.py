@@ -30,7 +30,7 @@ class SuperpositionCheck(Check):
 
     def set_connection(self, base_info, secondary_info):
         if not self.connections.get(base_info["name"]):
-            # should never happen because we already gave every node a connection
+            # should never happen because we already set every node with an empty dict 
             self.connections[base_info["name"]] = dict()
         self.connections[base_info["name"]][secondary_info["name"]] = 0
 
@@ -122,7 +122,8 @@ class SuperpositionCheck(Check):
                 if not self.check_connection(base_name, secondary_name):
                     self.add_error(base_name, secondary_name)
                 else:
-                    self.connections[base_name][secondary_name] += 1
+                    if self.connections.get(base_name):
+                        self.connections[base_name][secondary_name] += 1
         
         self.make_errors()
         
