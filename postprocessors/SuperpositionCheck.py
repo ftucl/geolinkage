@@ -63,8 +63,15 @@ class SuperpositionCheck(Check):
             # this made a simple connection matrix
             return matrix, self.base_names, self.secondary_names
     
-    #def make_area_matrix(self):
+    def make_area_matrix(self):
+        matrix = np.zeros((len(self.base_names), len(self.secondary_names)), dtype=float)
 
+        for i, base in enumerate(self.base_names):
+            for j, secondary in enumerate(self.secondary_names):
+                if self.connections.get(base):
+                    matrix[i][j] = self.connections[base].get(secondary, 0)
+        
+        return matrix, self.base_names, self.secondary_names
 
 
     # We use a structure to save the connections between nodes.
@@ -80,9 +87,9 @@ class SuperpositionCheck(Check):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
-        # matrix, base_labels, secondary_labels= self.make_area_matrix()
-        # visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
-        #                                base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
+        matrix, base_labels, secondary_labels= self.make_area_matrix()
+        visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
+                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
 
     def arc_init_operation(self, arc_id, arc):
         pass
