@@ -12,9 +12,9 @@ class SuperpositionCheck(Check):
 
         self.base_names = []
         self.secondary_names = []
+        self.nodes = {}
 
         self.connections = {}
-        self.nodes = {}
         self.connection_error = {} 
 
     # Space for auxiliary functions specific to this class.
@@ -29,10 +29,10 @@ class SuperpositionCheck(Check):
             self.errors.append(f"El elemento {base} del tipo {self.base_feature} no está conectado a los elementos {secondaries} de tipo {self.secondary_feature}.")
 
     def set_connection(self, base_info, secondary_info):
-        if self.connections.get(base_info["name"]):
-            self.connections[base_info["name"]].append(secondary_info["name"])
-        else: # Never reaches this branch because we create an empty list for every base element.
-            self.connections[base_info["name"]] = [secondary_info["name"]]
+        if not self.connections.get(base_info["name"]):
+            # should never happen because we already gave every node a connection
+            self.connections[base_info["name"]] = dict()
+        self.connections[base_info["name"]][secondary_info["name"]] = 0
 
     def check_connection(self, base_name, secondary_name):
         if self.connections.get(base_name):
@@ -62,6 +62,9 @@ class SuperpositionCheck(Check):
 
             # this made a simple connection matrix
             return matrix, self.base_names, self.secondary_names
+    
+    def make_area_matrix(self):
+
 
 
     # We use a structure to save the connections between nodes.
@@ -75,7 +78,10 @@ class SuperpositionCheck(Check):
 
     def plot(self, visualizator):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
-        visualizator.write_matrix_img(matrix, "superposition_matrix_"+self.base_feature+"_"+self.secondary_feature,
+        visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
+                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
+        matrix, base_labels, secondary_labels= self.make_area_matrix()
+        visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
 
     def arc_init_operation(self, arc_id, arc):
@@ -87,7 +93,7 @@ class SuperpositionCheck(Check):
             self.nodes[node_id] = node
             if type_id == self.base_feature_type_id:
                 self.base_names.append(node["name"])
-                self.connections[node["name"]] = []
+                self.connections[node["name"]] = dict()
             else: 
                 self.secondary_names.append(node["name"])
 
@@ -115,6 +121,8 @@ class SuperpositionCheck(Check):
             for secondary_name in secondary_element:
                 if not self.check_connection(base_name, secondary_name):
                     self.add_error(base_name, secondary_name)
+                else:
+                    self.connections[base_name][secondary_name] += 1
         
         self.make_errors()
         

@@ -12,6 +12,8 @@ class Visualizator:
         sns.set_theme(font_scale=0.5)
         ax = sns.heatmap(matrix, cmap=cmap, xticklabels=column_labels, yticklabels=row_labels, cbar=cbar,  linewidths=linewidth, linecolor='white')
 
+        ax.set_xticklabels(ax.get_xticklabels(), fontsize = min(10, 100//len(column_labels)))
+
         figure = ax.get_figure()
 
         figure.savefig( self.directory_path + '/' + name + '.svg' , format='svg', bbox_inches='tight')
