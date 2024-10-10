@@ -518,7 +518,6 @@ class AppKernel(MapFileManagerProtocol):
         # GeoChecker Logic
         # -------------------------------------------------------------------------------
         # check if there are errors in the geometry
-        # should i provide the necessary data here ?
         self.get_consolidate_cells()
         self.geo_checker.setup(consolidate_cells=self.consolidate_cells, arcs=self.geo_processor.arcs, nodes=self.geo_processor.nodes)
         self.geo_checker.run()

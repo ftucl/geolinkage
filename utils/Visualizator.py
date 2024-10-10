@@ -13,7 +13,5 @@ class Visualizator:
         ax = sns.heatmap(matrix, cmap=cmap, xticklabels=column_labels, yticklabels=row_labels, cbar=cbar,  linewidths=linewidth, linecolor='white')
 
         figure = ax.get_figure()
-        
-        dpi = 100 * max(len(row_labels), len(column_labels)) if row_labels and column_labels else 10
 
-        figure.savefig( self.directory_path + '/' + name + '.jpg', dpi = dpi , bbox_inches='tight')
+        figure.savefig( self.directory_path + '/' + name + '.svg' , format='svg', bbox_inches='tight')
