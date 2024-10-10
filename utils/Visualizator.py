@@ -10,9 +10,11 @@ class Visualizator:
                         , cbar = False, linewidth = 0):
 
         ax = sns.heatmap(matrix, cmap=cmap, xticklabels=column_labels, yticklabels=row_labels, cbar=cbar,  linewidths=linewidth, linecolor='white')
+        x_fontsize = min(10, 200//len(column_labels))
+        y_fontsize = min(10, 200//len(row_labels))
 
-        ax.set_xticklabels(ax.get_xticklabels(), fontsize = min(10, 100//len(column_labels)))
-        ax.set_yticklabels(ax.get_yticklabels(), fontsize = min(10, 100//len(row_labels)))
+        ax.set_xticklabels(ax.get_xticklabels(), fontsize = x_fontsize)
+        ax.set_yticklabels(ax.get_yticklabels(), fontsize = y_fontsize)
 
         figure = ax.get_figure()
 

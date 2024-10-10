@@ -63,7 +63,7 @@ class SuperpositionCheck(Check):
             # this made a simple connection matrix
             return matrix, self.base_names, self.secondary_names
     
-    def make_area_matrix(self):
+    #def make_area_matrix(self):
 
 
 
@@ -80,9 +80,9 @@ class SuperpositionCheck(Check):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
-        matrix, base_labels, secondary_labels= self.make_area_matrix()
-        visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
-                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
+        # matrix, base_labels, secondary_labels= self.make_area_matrix()
+        # visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
+        #                                base_labels, secondary_labels, cmap='rocket', linewidth=0.5)
 
     def arc_init_operation(self, arc_id, arc):
         pass
