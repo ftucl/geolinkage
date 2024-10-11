@@ -2,6 +2,81 @@ from postprocessors.Check import Check
 import numpy as np
 
 class SuperpositionCheck(Check):
+    """
+    SuperpositionCheck class is a subclass of Check class.
+
+    This class is used to check if a superposition between two features is corresponded
+    by a connection in the WEAP model.
+
+    Attributes:
+    ----------
+    base_feature : str
+        Name of the base feature to check.
+    secondary_feature : str
+        Name of the secondary feature to check.
+    base_feature_type_id : int
+        Type ID of the base feature.
+    secondary_feature_type_id : int
+        Type ID of the secondary feature.
+    base_names : dict
+        Dictionary to store the names of the base features and the amount of cells
+        it has in the linkage file.
+    secondary_names : dict
+        Dictionary to store the names of the secondary features and the amount of cells
+        it has in the linkage file.
+    nodes : dict
+        Dictionary to store the nodes data.
+    connections : dict
+        Dictionary to store all the base features and the secondary features
+        they are connected to.
+    connection_error : dict
+        Dictionary to store the errors found in the connections between the base
+        and secondary features.
+
+    Methods:
+    --------
+    add_error(base_element, super_element)
+        Add an error to the connection_error dictionary, checks if the base element
+        is already in the dictionary and if the super element is already in the base element
+        dictionary.
+    make_errors()
+        Converts the connection_error dictionary into a list of errors strings.
+    set_connection(base_info, secondary_info)
+        Set the connection between the base and secondary features.
+    check_connection(base_name, secondary_name)
+        Check if the base element is connected to the secondary element. 
+        It returns True if the connection exists or if the base element is not part
+        of the WEAP model, False otherwise.
+    make_connection_matrix()
+        Create a matrix with the connections between the base and secondary features,
+        used for visualization.
+    make_area_matrix()
+        Create a matrix with the amount of errors in the connections between the base
+        and secondary features, used for visualization.
+    get_name()
+        Return the name of the check.
+    get_description()
+        Return the description of the check.
+    plot(visualizator)
+        Plot the results of the check, uses the Visualizator instance to write the
+        images to files.
+        Uses as subroutines the make_connection_matrix and make_area_matrix methods to
+        create the necesary data for the visualization.
+    arc_init_operation(arc_id, arc)
+        Does nothing.
+    node_init_operation(node_id, node)
+        Saves the information for all the relevant nodes.
+    cell_init_operation(cell_id, cell)
+        Does nothing.
+    arc_check_operation(arc_id, arc)
+        Builds the connections between the base and secondary features.
+    node_check_operation(node_id, node)
+        Does nothing.
+    cell_check_operation(cell_id, cell)
+        Checks the connections between the base and secondary features present in
+        each cell.
+    """
+
     def __init__(self, base_feature, secondary_feature, config):
         super().__init__()
         self.base_feature = base_feature
@@ -91,12 +166,11 @@ class SuperpositionCheck(Check):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5,
-                                       title="Conexiones entre los elementos "+self.base_feature+" y "+self.secondary_feature+
-                                       ".\nEn rojo los elementos con errores.")
+                                       title="En blanco conexiones entre "+self.base_feature+" y "+self.secondary_feature".\nEn rojo las celdas con incongruencias entre modelos.")
         matrix, base_labels, secondary_labels= self.make_area_matrix()
         visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket_r', linewidth=0.5,
-                                       title="Cantidad de celdas de intersección de elementos "+self.base_feature+" y "+self.secondary_feature)
+                                       title="Magnitud de errores en las conexiones entre "+self.base_feature+" y "+self.secondary_feature)
 
     def arc_init_operation(self, arc_id, arc):
         pass

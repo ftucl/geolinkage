@@ -3,12 +3,121 @@ from utils.Errors import ErrorManager
 from utils.Visualizator import Visualizator
 
 class GeoChecker:
+    """
+    GeoChecker class is the main class for the GeoChecker postprocessor. It is in charge of managing the checks,
+    looping through the data and visualizing the checks.
+
+    Attributes:
+    ----------
+
+    checks : list
+        List of checks to be performed, this checks are instances of the Check class.
+    
+    config : ConfigApp
+        Configuration object for the GeoChecker postprocessor.
+    
+    img_path : str
+        Path to the directory where the visualizations and data of the checks will be saved.
+    
+    arcs : dict
+        Dictionary containing the arcs data.
+        {Arc ID :
+            {
+                'type_id': geometry type ID of the arc,
+                'src_id': source node ID (or None),
+                'dst_id': destination node ID (or None)
+            }
+        }
+    
+    nodes : dict
+        Dictionary containing the nodes data with the following structure.
+        {Node ID : 
+            {   
+                'type_id': geometry type ID, 
+                'name': node name, 
+                'x': x-axis position of the node, 
+                'y': y-axis position of the node, 
+                'cat': node internal ID (used by 'pygrass library')
+            }
+        }    
+    cells : dict
+        Dictionary containing the consolidated cells data.
+        {Cell ID :
+            {
+                'catchment': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]},
+                'groundwater': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]},
+                'river': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]},
+                'demand_site': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]}
+            }
+        }
+
+    error : ErrorManager
+        Error manager object to manage the errors and warning obtained during the checks.
+    
+    summary : SummaryInfo
+        Summary object to store the summary of the checks.
+    
+    visualizator : Visualizator
+        Visualizator object to manage the visualization of the checks.
+    
+    Methods:
+    --------
+    set_arcs_and_nodes(arcs, nodes):
+        Set the arcs and nodes data to be used in the checks.
+    
+    set_consolidate_cells(cells):
+        Set the consolidated cells data to be used in the checks.
+    
+    get_summary():
+        Return the summary of the checks.
+    
+    print_checks():
+        Return a string with the checks names and descriptions.
+    
+    checking_errors():
+        Loop through the checks and append the errors to the error manager.
+
+    setup(consolidate_cells, arcs, nodes):
+        Set the consolidated cells, arcs and nodes data to be used in the checks.
+
+    init_nodes_loop():
+        Do a first loop through the nodes data and initialize the checks for the nodes.
+    
+    init_arcs_loop():
+        Do a first loop through the arcs data and initialize the checks for the arcs.
+
+    init_cells_loop():
+        Do a first loop through the cells data and initialize the checks for the cells.
+
+    check_nodes_loop():
+        Loop through the nodes data and perform the checks for the nodes.
+
+    check_arcs_loop():
+        Loop through the arcs data and perform the checks for the arcs.
+    
+    check_cells_loop():
+        Loop through the cells data and perform the checks for the cells.
+    
+    build_checks():
+        Run the initial loop through the data.
+
+    perform_checks():
+        Runs the final loop through the data to perform the checks.
+    
+    plot_checks():
+        Loop through the checks and run the plot method for each one.
+
+    run():
+        Run the GeoChecker postprocessor, initializing, performing the checks, returning errors and visualizing
+
+    """
+
     def __init__(self, checks, config, img_path):
+        self.checks = checks
+
         self.arcs = None
         self.nodes = None
         self.cells = None
-
-        self.checks = checks
 
         self.config = config
         self.error = ErrorManager(config)
@@ -41,14 +150,6 @@ class GeoChecker:
         self.set_arcs_and_nodes(arcs, nodes)
         
     def init_nodes_loop(self):
-        # Node structure                 
-        #        - 'type_id': geometry type ID.
-        #        - 'name': node name.
-        #        - 'x': x-axis position of the node.
-        #        - 'y': y-axis position of the node.
-        #        - 'cat': node internal ID (used by 'pygrass library').
-
-
         for node_id, node in self.nodes.items():
             for check in self.checks:
                 check.node_init_operation(node_id ,node)
@@ -56,11 +157,6 @@ class GeoChecker:
         self.summary.set_process_line("init_check_node", check_error = False)
 
     def init_arcs_loop(self):
-        # Arc structure
-        #       - 'type_id': geometry type ID.
-        #       - 'src_id': source node ID (or None)
-        #       - 'dst_id': destination node ID (or None).
-
         for arc_id , arc in self.arcs.items():
             for check in self.checks:
                 check.arc_init_operation(arc_id, arc)
@@ -68,13 +164,6 @@ class GeoChecker:
         self.summary.set_process_line("init_check_arc", check_error = False)
         
     def init_cells_loop(self):
-        # Cell structure
-        # {
-        # 'catchment': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]},
-        # 'groundwater': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]},
-        # 'river': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]},
-        # 'demand_site': {number_of_data : int, cell_id : int, row : int, col : int, data : [{area : float, cell_id : int, name : str, map_name : str}]}
-        # }
         for cell_id, cell in self.cells.items():
             for check in self.checks:
                 check.cell_init_operation(cell_id, cell)
