@@ -50,7 +50,7 @@ class SuperpositionCheck(Check):
     make_connection_matrix()
         Create a matrix with the connections between the base and secondary features,
         used for visualization.
-    make_area_matrix()
+    make_error_matrix()
         Create a matrix with the amount of errors in the connections between the base
         and secondary features, used for visualization.
     get_name()
@@ -60,7 +60,7 @@ class SuperpositionCheck(Check):
     plot(visualizator)
         Plot the results of the check, uses the Visualizator instance to write the
         images to files.
-        Uses as subroutines the make_connection_matrix and make_area_matrix methods to
+        Uses as subroutines the make_connection_matrix and make_error_matrix methods to
         create the necesary data for the visualization.
     arc_init_operation(arc_id, arc)
         Does nothing.
@@ -139,7 +139,7 @@ class SuperpositionCheck(Check):
             # this made a simple connection matrix
             return matrix, base_names, secondary_names
     
-    def make_area_matrix(self):
+    def make_error_matrix(self):
         base_names = list(self.base_names.keys())
         secondary_names = list(self.secondary_names.keys())
 
@@ -150,7 +150,7 @@ class SuperpositionCheck(Check):
             i = base_names.index(base)
             for secondary in secondaries:
                 j = secondary_names.index(secondary)
-                matrix[i][j] = self.connection_error[base][secondary]
+                matrix[i][j] = self.connection_error[base][secondary] / self.secondary_names[secondary]
                 
         return matrix, base_names, secondary_names
     # We use a structure to save the connections between nodes.e
@@ -166,8 +166,8 @@ class SuperpositionCheck(Check):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5,
-                                       title="En blanco conexiones entre "+self.base_feature+" y "+self.secondary_feature".\nEn rojo las celdas con incongruencias entre modelos.")
-        matrix, base_labels, secondary_labels= self.make_area_matrix()
+                                       title="En blanco conexiones entre "+self.base_feature+" y "+self.secondary_feature+".\nEn rojo las celdas con incongruencias entre modelos.")
+        matrix, base_labels, secondary_labels= self.make_error_matrix()
         visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket_r', linewidth=0.5,
                                        title="Magnitud de errores en las conexiones entre "+self.base_feature+" y "+self.secondary_feature)
