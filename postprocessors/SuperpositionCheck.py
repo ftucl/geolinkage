@@ -150,7 +150,9 @@ class SuperpositionCheck(Check):
             i = base_names.index(base)
             for secondary in secondaries:
                 j = secondary_names.index(secondary)
-                matrix[i][j] = self.connection_error[base][secondary] / self.secondary_names[secondary]
+                magnitud = self.connection_error[base][secondary] / self.secondary_names[secondary]
+                print(magnitud)
+                matrix[i][j] = magnitud
                 
         return matrix, base_names, secondary_names
     # We use a structure to save the connections between nodes.e
@@ -166,7 +168,7 @@ class SuperpositionCheck(Check):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5,
-                                       title="En blanco conexiones entre "+self.base_feature+" y "+self.secondary_feature+".\nEn rojo las celdas con incongruencias entre modelos.")
+                                       title="En negro conexiones entre "+self.base_feature+" y "+self.secondary_feature+".\nEn rojo las celdas con incongruencias entre modelos.")
         matrix, base_labels, secondary_labels= self.make_error_matrix()
         visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket_r', linewidth=0.5,
