@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-class Visualizator:
+class Visualizer:
     def __init__(self, directory_path):
         self.directory_path = directory_path
 

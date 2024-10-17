@@ -1,6 +1,6 @@
 from utils.SummaryInfo import SummaryInfo
 from utils.Errors import ErrorManager
-from utils.Visualizator import Visualizator
+from utils.Visualizer import Visualizer
 
 class GeoChecker:
     """
@@ -122,7 +122,7 @@ class GeoChecker:
         self.config = config
         self.error = ErrorManager(config)
         self.summary = SummaryInfo('GeoChecker', self.error, config)
-        self.visualizator = Visualizator(img_path)
+        self.visualizator = Visualizer(img_path)
         
     def set_arcs_and_nodes(self, arcs, nodes):
         self.arcs = arcs

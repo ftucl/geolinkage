@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from utils.Visualizator import Visualizator
 
 class Check(ABC):
     """

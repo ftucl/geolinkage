@@ -122,12 +122,12 @@ class SuperpositionCheck(Check):
             base_names = list(self.base_names.keys())
             secondary_names = list(self.secondary_names.keys())
 
-            matrix = np.zeros((len(base_names), len(secondary_names)), dtype=float)
+            matrix = np.ones((len(base_names), len(secondary_names)), dtype=float)
 
             for i, base in enumerate(base_names):
                 for j, secondary in enumerate(secondary_names):
                     if secondary in self.connections[base]:
-                        matrix[i][j] = 1
+                        matrix[i][j] = 0
             
             # Add the errors in red
             for base, secondaries in self.connection_error.items():
@@ -153,7 +153,7 @@ class SuperpositionCheck(Check):
                 matrix[i][j] = self.connection_error[base][secondary]
                 
         return matrix, base_names, secondary_names
-    # We use a structure to save the connections between nodes.
+    # We use a structure to save the connections between nodes.e
     # We use another one to save a translation between the node ID and the node name.
 
     def get_name(self):
