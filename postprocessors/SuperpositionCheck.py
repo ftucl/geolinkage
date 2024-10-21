@@ -117,6 +117,31 @@ class SuperpositionCheck(Check):
         
         # Solo llega aquí si no existe el elemento base en WEAP.
         return True
+    
+    def make_error_file_list(self):
+        error_list = []
+        if not self.connection_error or len(self.connection_error) == 0:
+            return error_list
+        
+        errors = {}
+        for base in self.connection_error.keys():
+            for secondary in self.connection_error[base].keys():
+                errors[f"{base}-{secondary}"] = {"amount_error": self.connection_error[base][secondary],
+                                                 "percentaje_error_over_primary": self.connection_error[base][secondary] / self.base_names[base],
+                                                 "percentaje_error_over_secondary": self.connection_error[base][secondary] / self.secondary_names[secondary]}
+
+        #sort the errors by the amount of errors
+        errors = dict(sorted(errors.items(), key=lambda item: item[1]["amount_error"], reverse=True))
+        longest_base_name = max([len(error.split("-")[0]) for error in errors.keys()])-1
+        longest_secondary_name = max([len(error.split("-")[1]) for error in errors.keys()])-1
+
+        for error in errors.keys():
+            [base, secondary] = error.split('-')
+            error_txt = f"{self.base_feature}: {base} {" "*(longest_base_name-len(base))}|-| {self.secondary_feature}: {secondary} {" "*(longest_secondary_name-len(secondary))} -> {errors[error]['amount_error']} errores,  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
+            error_list.append(error_txt)
+        
+        return error_list
+
 
     def make_connection_matrix(self):
             base_names = list(self.base_names.keys())
@@ -151,7 +176,6 @@ class SuperpositionCheck(Check):
             for secondary in secondaries:
                 j = secondary_names.index(secondary)
                 magnitud = self.connection_error[base][secondary] / self.secondary_names[secondary]
-                print(magnitud)
                 matrix[i][j] = magnitud
                 
         return matrix, base_names, secondary_names
@@ -164,15 +188,17 @@ class SuperpositionCheck(Check):
     def get_description(self):
         return "Check if the base feature is superposed with the secondary feature."
 
-    def plot(self, visualizator):
+    def plot(self, visualizer):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
-        visualizator.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
+        visualizer.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket', linewidth=0.5,
                                        title="En negro conexiones entre "+self.base_feature+" y "+self.secondary_feature+".\nEn rojo las celdas con incongruencias entre modelos.")
         matrix, base_labels, secondary_labels= self.make_error_matrix()
-        visualizator.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
+        visualizer.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
                                        base_labels, secondary_labels, cmap='rocket_r', linewidth=0.5,
                                        title="Magnitud de errores en las conexiones entre "+self.base_feature+" y "+self.secondary_feature)
+        error_list = self.make_error_file_list()
+        visualizer.write_text_file(f"error_report_{self.base_feature}_{self.secondary_feature}", texts=error_list)
 
     def arc_init_operation(self, arc_id, arc):
         pass

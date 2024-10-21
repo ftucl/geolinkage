@@ -26,3 +26,12 @@ class Visualizer:
         figure = ax.get_figure()
 
         figure.savefig( self.directory_path + '/' + name + '.svg' , format='svg', bbox_inches='tight')
+
+    def write_text_file(self, name, text=None, texts=None):
+        if text:
+            with open(self.directory_path + '/' + name + '.txt', 'w') as file:
+                file.write(text)
+        elif texts:
+            with open(self.directory_path + '/' + name + '.txt', 'w') as file:
+                for text in texts:
+                    file.write(text + '\n')
