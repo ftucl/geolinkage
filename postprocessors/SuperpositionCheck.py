@@ -137,7 +137,7 @@ class SuperpositionCheck(Check):
 
         for error in errors.keys():
             [base, secondary] = error.split('-')
-            error_txt = f"{self.base_feature}: {base} {" "*(longest_base_name-len(base))}|-| {self.secondary_feature}: {secondary} {" "*(longest_secondary_name-len(secondary))} -> {errors[error]['amount_error']} errores,  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
+            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base))}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary))}-> {errors[error]['amount_error']} error(es),  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
             error_list.append(error_txt)
         
         return error_list
@@ -190,15 +190,23 @@ class SuperpositionCheck(Check):
 
     def plot(self, visualizer):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
-        visualizer.write_matrix_img(matrix, "connection_matrix_"+self.base_feature+"_"+self.secondary_feature,
-                                       base_labels, secondary_labels, cmap='rocket', linewidth=0.5,
-                                       title="En negro conexiones entre "+self.base_feature+" y "+self.secondary_feature+".\nEn rojo las celdas con incongruencias entre modelos.")
+        visualizer.write_matrix_img(matrix, f"{self.base_feature}_{self.secondary_feature}_connection_matrix", \
+                                    color_labels=[ "No Connection", "Error", "Connection"], \
+                                    colors_list=["#000000", "#ff0000","#ffffff"], \
+                                    row_labels=base_labels, column_labels=secondary_labels, linewidth=0.5,\
+                                    cbar=True, min_val = 0, max_val = 1, \
+                                    title=f"Matriz de conexión entre {self.base_feature} y {self.secondary_feature}", \
+                                    x_label = self.secondary_feature, y_label = self.base_feature)
+
         matrix, base_labels, secondary_labels= self.make_error_matrix()
-        visualizer.write_matrix_img(matrix, "area_matrix_"+self.base_feature+"_"+self.secondary_feature,
-                                       base_labels, secondary_labels, cmap='rocket_r', linewidth=0.5,
-                                       title="Magnitud de errores en las conexiones entre "+self.base_feature+" y "+self.secondary_feature)
+        visualizer.write_matrix_img(matrix, f"{self.base_feature}_{self.secondary_feature}_error_magnitude_matrix", \
+                                    row_labels=base_labels, column_labels=secondary_labels, linewidth=0.5,\
+                                    cbar=True, cmap='rocket_r',\
+                                    title=f"Matriz de magnitud de errores entre {self.base_feature} y {self.secondary_feature}, normalizado sobre el área de {self.secondary_feature}", \
+                                    x_label = self.secondary_feature, y_label = self.base_feature) 
+
         error_list = self.make_error_file_list()
-        visualizer.write_text_file(f"error_report_{self.base_feature}_{self.secondary_feature}", texts=error_list)
+        visualizer.write_text_file(f"{self.base_feature}_{self.secondary_feature}_error_report", texts=error_list)
 
     def arc_init_operation(self, arc_id, arc):
         pass
