@@ -191,7 +191,7 @@ class SuperpositionCheck(Check):
     def plot(self, visualizer):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizer.write_matrix_img(matrix, f"{self.base_feature}_{self.secondary_feature}_connection_matrix", \
-                                    color_labels=[ "No Connection", "Error", "Connection"], \
+                                    color_labels=[ "Connection", "Error", "No Connection"], \
                                     colors_list=["#000000", "#ff0000","#ffffff"], \
                                     row_labels=base_labels, column_labels=secondary_labels, linewidth=0.5,\
                                     cbar=True, min_val = 0, max_val = 1, \
@@ -201,7 +201,7 @@ class SuperpositionCheck(Check):
         matrix, base_labels, secondary_labels= self.make_error_matrix()
         visualizer.write_matrix_img(matrix, f"{self.base_feature}_{self.secondary_feature}_error_magnitude_matrix", \
                                     row_labels=base_labels, column_labels=secondary_labels, linewidth=0.5,\
-                                    cbar=True, cmap='rocket_r',\
+                                    cbar=True, cmap='rocket_r', min_val = 0, max_val = 1,\
                                     title=f"Matriz de magnitud de errores entre {self.base_feature} y {self.secondary_feature}, normalizado sobre el área de {self.secondary_feature}", \
                                     x_label = self.secondary_feature, y_label = self.base_feature) 
 
