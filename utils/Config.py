@@ -85,14 +85,15 @@ class ConfigApp:
 
     __config_data = read_config_file()
 
-    # -[first letter of error]-[main][catchment][gw][river][ds][geo][error]
+    # -[first letter of error]-[main][catchment][gw][river][ds][geo][check][error]
     error_codes = {
-        'node_file': 'G-000011',
-        'arc_file': 'G-000012',
-        'geo_basic_column': 'G-000013',
-        'not_found_file': 'G-000014',
-        'linkage_in_file': 'M-100001',
-        'linkage_out_file': 'M-100002',
+        'node_file': 'G-0000101',
+        'arc_file': 'G-0000102',
+        'geo_basic_column': 'G-0000103',
+        'not_found_file': 'G-0000104',
+        'linkage_in_file': 'M-1000001',
+        'linkage_out_file': 'M-1000002',
+        'check_results_folder': 'C-0000011',
         'feature_file': 'F-0111101',
         'well_file': 'F-0000101',
         'ds_folder': 'F-0000102'
@@ -110,7 +111,8 @@ class ConfigApp:
             'RiverProcess': config_data["FEATURE NAMES"]["river"],
             'DemandSiteProcess': config_data["FEATURE NAMES"]["demand sites"],
             'GeoKernel': config_data["FEATURE NAMES"]["geometry"],
-            'AppKernel': config_data["FEATURE NAMES"]["main program"]
+            'AppKernel': config_data["FEATURE NAMES"]["main program"],
+            'GeoCheck': config_data["FEATURE NAMES"]["geometry checker"],
         }
 
         self.grass_internals = {

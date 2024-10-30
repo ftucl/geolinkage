@@ -112,7 +112,7 @@ class GeoChecker:
 
     """
 
-    def __init__(self, checks, config, img_path):
+    def __init__(self, checks, config, folder_path=None):
         self.checks = checks
 
         self.arcs = None
@@ -122,7 +122,13 @@ class GeoChecker:
         self.config = config
         self.error = ErrorManager(config)
         self.summary = SummaryInfo('GeoChecker', self.error, config)
-        self.visualizator = Visualizer(img_path)
+        self.visualizator = Visualizer()
+
+        if folder_path is not None:
+            self.set_result_path(folder_path)
+
+    def set_result_path(self, path):
+        self.visualizator.set_result_path(path)
         
     def set_arcs_and_nodes(self, arcs, nodes):
         self.arcs = arcs

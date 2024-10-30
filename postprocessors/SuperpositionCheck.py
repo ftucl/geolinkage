@@ -137,7 +137,7 @@ class SuperpositionCheck(Check):
 
         for error in errors.keys():
             [base, secondary] = error.split('-')
-            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base))}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary))}-> {errors[error]['amount_error']} error(es),  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
+            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base) + 1)}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary) + 1)}-> {errors[error]['amount_error']} error(es),  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
             error_list.append(error_txt)
         
         return error_list

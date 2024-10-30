@@ -81,7 +81,7 @@ class ErrorProtocol:
         input_codes = []
         if required:
             input_codes += [codes['node_file'], codes['arc_file'], codes['not_found_file'],
-                            codes['linkage_in_file'], codes['linkage_out_file']]
+                            codes['linkage_in_file'], codes['linkage_out_file'], codes['check_results_folder']]
         if additional:
             input_codes.append(codes['feature_file'])
 
@@ -140,7 +140,7 @@ class MapFileManagerProtocol(ErrorProtocol, metaclass=ABCMeta):
             feature_names = tmp_conf.get_feature_names()
             for feature_name in feature_names:
                 cls.feature_file_paths[feature_name] = {}
-                if feature_name not in (tmp_conf.type_names['AppKernel'], tmp_conf.type_names['GeoKernel']):
+                if feature_name not in (tmp_conf.type_names['AppKernel'], tmp_conf.type_names['GeoKernel'], tmp_conf.type_names['GeoCheck']):
                     cls.feature_file_paths[feature_name]['path'] = {}
 
             cls.feature_file_paths[tmp_conf.type_names['DemandSiteProcess']]['well_path'] = {}
@@ -148,6 +148,7 @@ class MapFileManagerProtocol(ErrorProtocol, metaclass=ABCMeta):
             cls.feature_file_paths[tmp_conf.type_names['GeoKernel']]['arc_path'] = {}
             cls.feature_file_paths[tmp_conf.type_names['AppKernel']]['linkage_in_path'] = {}
             cls.feature_file_paths[tmp_conf.type_names['AppKernel']]['linkage_out_path'] = {}
+            cls.feature_file_paths[tmp_conf.type_names['GeoCheck']]['check_results_path'] = {}
 
     def __init__(self, config: ConfigApp, error: ErrorManager):
         super().__init__(config=config, error=error)
@@ -218,7 +219,6 @@ class MapFileManagerProtocol(ErrorProtocol, metaclass=ABCMeta):
     def set_linkage_out_file(self, folder_path: str):
         code_error = ConfigApp.error_codes['linkage_out_file']   # code error for output file
         feature_type = self.__config.type_names['AppKernel']
-
         if not folder_path:
             return False, []
 
@@ -240,6 +240,7 @@ class MapFileManagerProtocol(ErrorProtocol, metaclass=ABCMeta):
             self.append_error(typ=feature_type, msg=exist_folders[0][1], is_warn=False, code=code_error)
 
         return self.check_errors(code=code_error), self.get_errors(code=code_error)
+    
 
     def set_linkage_in_file(self, file_path: str):
         code_error = ConfigApp.error_codes['linkage_in_file']  # code error for input linkage file

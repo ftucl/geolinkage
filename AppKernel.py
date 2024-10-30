@@ -119,7 +119,6 @@ class AppKernel(MapFileManagerProtocol):
                             SuperpositionCheck(base_feature='groundwater', secondary_feature='demand_site', config=self.config)
                         ]
             , config= self.config
-            , img_path= "/home/ato/geolinkage_project/imgs/" #hardcodeado
             )
         
         self.consolidate_cells = None
@@ -191,6 +190,25 @@ class AppKernel(MapFileManagerProtocol):
         else:
             # ds folder problem with error code [-17]
             self.append_error(msg=exist_folders[0][1], is_warn=False, code=code_error, typ=self.demand_site_processor.get_feature_type())
+
+        return self.check_errors(code=code_error), self.get_errors(code=code_error)
+    
+    def set_geo_check_results_folder(self, folder_path: str):
+        code_error = ConfigApp.error_codes['check_results_folder']   # code error for output file
+        feature_type = self.config.type_names['GeoCheck']
+
+        if not folder_path:
+            return False, []
+
+        _, exist_folders = UtilMisc.check_paths_exist(folders=[folder_path])
+
+        if exist_folders[0][0]:
+            feature = MapFileManagerProtocol.feature_file_paths[feature_type]
+            feature['results_path'] = {'path': folder_path}  # os.path.join(folder_path, map_name)
+            
+        else:
+            # linkage-out problem with error code
+            self.append_error(typ=feature_type, msg=exist_folders[0][1], is_warn=False, code=code_error)
 
         return self.check_errors(code=code_error), self.get_errors(code=code_error)
 
@@ -308,6 +326,11 @@ class AppKernel(MapFileManagerProtocol):
                                       linkage_name=linkage_name, linkage_new_name=linkage_new_name)
 
         return self.check_errors(types=(self.get_feature_type())), self.get_errors()
+
+    def run_geo_checker(self, result_path: str):
+        self.geo_checker.set_result_path(result_path)
+        self.geo_checker.setup(consolidate_cells=self.consolidate_cells, arcs=self.geo_processor.arcs, nodes=self.geo_processor.nodes)
+        self.geo_checker.run()
 
     @TimerSummary.timeit
     # @main_task
@@ -513,14 +536,6 @@ class AppKernel(MapFileManagerProtocol):
         # -------------------------------------------------------------------------------
         # import files to vector maps
         # self.river_processor.run(linkage_name=linkage_name)
-
-        # -------------------------------------------------------------------------------
-        # GeoChecker Logic
-        # -------------------------------------------------------------------------------
-        # check if there are errors in the geometry
-        self.get_consolidate_cells()
-        self.geo_checker.setup(consolidate_cells=self.consolidate_cells, arcs=self.geo_processor.arcs, nodes=self.geo_processor.nodes)
-        self.geo_checker.run()
 
         # -------------------------------------------------------------------------------
         # General Logic

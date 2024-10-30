@@ -4,10 +4,15 @@ import matplotlib.colors as colors
 import seaborn as sns
 
 class Visualizer:
-    def __init__(self, directory_path):
-        self.directory_path = directory_path
+    def __init__(self):
+        self.result_path = None
+
+    def set_result_path(self, result_path: str):
+        self.result_path = result_path
 
     def write_matrix_img(self, matrix, name, **kwargs):
+        if not self.result_path:
+            raise ValueError('Result path is not set. Please set the result path')
      # Manage kwargs
         row_labels = kwargs.get('row_labels')
         column_labels = kwargs.get('column_labels')
@@ -76,15 +81,18 @@ class Visualizer:
         
 
         # Save the plot as an SVG
-        plt.savefig(self.directory_path + '/' + name + '.pdf', format='pdf', bbox_inches='tight')
+        plt.savefig(self.result_path + '/' + name + '.pdf', format='pdf', bbox_inches='tight')
         plt.clf()  # Clear the figure for the next plot
 
 
     def write_text_file(self, name, text=None, texts=None):
+        if not self.result_path:
+            raise ValueError('Result path is not set. Please set the result path')
+
         if text:
-            with open(self.directory_path + '/' + name + '.txt', 'w') as file:
+            with open(self.result_path + '/' + name + '.txt', 'w') as file:
                 file.write(text)
         elif texts:
-            with open(self.directory_path + '/' + name + '.txt', 'w') as file:
+            with open(self.result_path + '/' + name + '.txt', 'w') as file:
                 for text in texts:
                     file.write(text + '\n')
