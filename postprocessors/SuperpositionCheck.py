@@ -144,6 +144,9 @@ class SuperpositionCheck(Check):
 
 
     def make_connection_matrix(self):
+            if self.base_names == {} or self.secondary_names == {}:
+                return None, None, None
+    
             base_names = list(self.base_names.keys())
             secondary_names = list(self.secondary_names.keys())
 
@@ -165,8 +168,11 @@ class SuperpositionCheck(Check):
             return matrix, base_names, secondary_names
     
     def make_error_matrix(self):
+        if self.connection_error == {}:
+            return None, None, None
+        
         base_names = list(self.connection_error.keys())
-        secondary_names = list(set(self.connection_error[base].keys() for base in base_names))
+        secondary_names = list(set().union(*list(self.connection_error.values())))
 
         matrix = np.zeros((len(base_names), len(secondary_names)), dtype=float)
 
@@ -179,8 +185,6 @@ class SuperpositionCheck(Check):
                 matrix[i][j] = magnitud
                 
         return matrix, base_names, secondary_names
-    # We use a structure to save the connections between nodes.e
-    # We use another one to save a translation between the node ID and the node name.
 
     def get_name(self):
         return f"Superposition check between {self.base_feature} and {self.secondary_feature}"

@@ -13,6 +13,9 @@ class Visualizer:
     def write_matrix_img(self, matrix, name, **kwargs):
         if not self.result_path:
             raise ValueError('Result path is not set. Please set the result path')
+        
+        if matrix is None:
+            return
      # Manage kwargs
         row_labels = kwargs.get('row_labels')
         column_labels = kwargs.get('column_labels')
