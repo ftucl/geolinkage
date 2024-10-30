@@ -57,6 +57,9 @@ class Visualizer:
         if y_label:
             ax.set_ylabel(y_label)
         
+        if len(column_labels) == 0 or len(row_labels) == 0:
+            return
+
         x_fontsize = min(10, 300 // len(column_labels))
         y_fontsize = min(10, 300 // len(row_labels))
         ax.set_xticklabels(column_labels, fontsize=x_fontsize, rotation=90)

@@ -165,8 +165,8 @@ class SuperpositionCheck(Check):
             return matrix, base_names, secondary_names
     
     def make_error_matrix(self):
-        base_names = list(self.base_names.keys())
-        secondary_names = list(self.secondary_names.keys())
+        base_names = list(self.connection_error.keys())
+        secondary_names = list(set(self.connection_error[base].keys() for base in base_names))
 
         matrix = np.zeros((len(base_names), len(secondary_names)), dtype=float)
 

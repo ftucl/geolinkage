@@ -400,7 +400,7 @@ class GrassInterface(InterfaceApp):
 
         grass.info('[DS FOLDER]: {}'.format(self.ds_folder))
         grass.info('[DS COLUMN]: {} \n'.format(self.ds_field))
-        
+
         grass.info('[CHECK RESULT FOLDER]: {}'.format(self.check_result_folder))
 
     def print_groundwater_model_info(self, gw_model):
