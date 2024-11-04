@@ -57,8 +57,8 @@ class GeoChecker:
     summary : SummaryInfo
         Summary object to store the summary of the checks.
     
-    visualizator : Visualizator
-        Visualizator object to manage the visualization of the checks.
+    visualizer : visualizer
+        visualizer object to manage the visualization of the checks.
     
     Methods:
     --------
@@ -122,13 +122,15 @@ class GeoChecker:
         self.config = config
         self.error = ErrorManager(config)
         self.summary = SummaryInfo('GeoChecker', self.error, config)
-        self.visualizator = Visualizer()
+        self.visualizer = Visualizer()
+        self.folder_path = None
 
         if folder_path is not None:
             self.set_result_path(folder_path)
 
     def set_result_path(self, path):
-        self.visualizator.set_result_path(path)
+        self.folder_path = path
+        self.visualizer.set_result_path(path)
         
     def set_arcs_and_nodes(self, arcs, nodes):
         self.arcs = arcs
@@ -148,8 +150,9 @@ class GeoChecker:
     
     def checking_errors(self):
         for check in self.checks:
-            for error in check.get_errors():
-                self.error.append(msg= error, typ= 'gc', is_warn= True)
+            if check.get_errors():
+                msg = f"Chequeo con nombre '{check.get_name()}' ha encontrado errores, revise el directorio {self.folder_path} para más información."
+                self.error.append(msg= msg, typ= 'geo_check', is_warn= True)
         
     def setup(self, consolidate_cells, arcs, nodes):
         self.set_consolidate_cells(consolidate_cells)
@@ -209,7 +212,7 @@ class GeoChecker:
 
     def plot_checks(self):
         for check in self.checks:
-            check.plot(self.visualizator)
+            check.plot(self.visualizer)
         
     def run(self):
         self.summary.set_input_param('checks', self.print_checks())

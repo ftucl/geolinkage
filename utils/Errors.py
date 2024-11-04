@@ -26,14 +26,12 @@ class ErrorManager:
         self._errors['rf'] = []  # return flows
         self._errors['ri'] = []  # runoff infiltrations
         self._errors['tl'] = []  # transmission links
-        self._errors['gc'] = []  # GeoCheck
 
 
         self._warnings['other'] = []
         self._warnings['rf'] = []  # return flows
         self._warnings['ri'] = []  # runoff infiltrations
         self._warnings['tl'] = []  # transmission links
-        self._warnings['gc'] = []  # geocheck
 
         self._errors_meta['other'] = {}
         self._warnings_meta['other'] = {}

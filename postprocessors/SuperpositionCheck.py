@@ -187,10 +187,10 @@ class SuperpositionCheck(Check):
         return matrix, base_names, secondary_names
 
     def get_name(self):
-        return f"Superposition check between {self.base_feature} and {self.secondary_feature}"
+        return f"Chequeo superposición {self.base_feature}-{self.secondary_feature}"
     
     def get_description(self):
-        return "Check if the base feature is superposed with the secondary feature."
+        return "Chequea si la superposición de dos elementos en el archivo de enlace es correspondida por una conexión en el modelo WEAP."
 
     def plot(self, visualizer):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
