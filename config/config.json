@@ -144,10 +144,10 @@
             "shortcut": "-g",
             "cmd_type": "flag"
             },
-            "gc": {
-                "cmd": "-gc",
+            "c": {
+                "cmd": "-c",
                 "help": "Execute checks over the linkage result.",
-                "shortcut": "-gc",
+                "shortcut": "-c",
                 "cmd_type": "flag"
             },
             "epsg_code": {
@@ -208,7 +208,7 @@
             "catchment": {
                 "cmd": "--catchment",
                 "help": "path of catchment shapefile",
-                "shortcut": "-c",
+                "shortcut": "-C",
                 "cmd_type": "key"
             },
             "gw": {

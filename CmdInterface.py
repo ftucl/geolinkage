@@ -309,7 +309,7 @@ class CmdInterface(InterfaceApp):
         }
         flags = {
             'g': args['g'] if args['g'] else False,
-            'gc': args['gc'] if args['gc'] else False # INTERFACE ADD
+            'c': args['c'] if args['c'] else False # INTERFACE ADD
                  }
 
         return options, flags, my_parser
@@ -426,7 +426,7 @@ def main(location: str):
             # atexit.register(cleanup, location=location)
             interface_app.run()
 
-            if flags['gc']:
+            if flags['c']:
                 interface_app.run_geo_checker()
 
             interface_app.print_input_summary()
@@ -437,7 +437,7 @@ def main(location: str):
             interface_app.print_ds_summary()
             interface_app.print_river_summary()
 
-            if flags['gc']:
+            if flags['c']:
                 interface_app.print_geo_check_summary()
     else:
         parser.print_help(sys.stderr)

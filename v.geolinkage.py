@@ -156,7 +156,7 @@
 #%end
 
 #%flag
-#% key: gc
+#% key: C
 #% description: Run geometry checks in the resulting linkage file.
 #% guisection: GeoCheck
 #% suppress_required: yes
@@ -526,7 +526,7 @@ def main(location: str):
         atexit.register(cleanup, location=location)
         interface_app.run()
 
-        if flags['gc']:
+        if flags['C']:
             interface_app.run_geo_checker()
 
         interface_app.print_input_summary()
@@ -537,7 +537,7 @@ def main(location: str):
         interface_app.print_ds_summary()
         interface_app.print_river_summary()
 
-        if flags['gc']:
+        if flags['C']:
             interface_app.print_geo_check_summary()
 
         app_sess.close()
