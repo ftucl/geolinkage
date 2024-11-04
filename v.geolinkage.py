@@ -401,7 +401,7 @@ class GrassInterface(InterfaceApp):
         grass.info('[DS FOLDER]: {}'.format(self.ds_folder))
         grass.info('[DS COLUMN]: {} \n'.format(self.ds_field))
 
-        grass.info('[CHECK RESULT FOLDER]: {}'.format(self.check_result_folder))
+        grass.info('[CHECK RESULT FOLDER]: {}'.format(self.geo_check_folder))
 
     def print_groundwater_model_info(self, gw_model):
         # get groundwater model info
@@ -517,12 +517,12 @@ def main(location: str):
     # set paths
     interface_app.set_required_paths(linkage_in_file=linkage_in_file, linkage_out_folder=linkage_out_folder,
                                      node_file=node_file, arc_file=arc_file)
-    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder, check_result_folder= geo_check_folder) #INTERFACE ADD
+    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder, geo_check_folder= geo_check_folder) #INTERFACE ADD
 
     # run kernel code
     if not interface_app.check_errors():
-        app_sess = Session()
-        app_sess.open(gisdb="/tmp", location=interface_app.location, create_opts="EPSG:{}".format(interface_app.epsg_code))
+        # app_sess = Session()
+        # app_sess.open(gisdb="/tmp", location=interface_app.location, create_opts="EPSG:{}".format(interface_app.epsg_code))
         atexit.register(cleanup, location=location)
         interface_app.run()
 

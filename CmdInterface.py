@@ -311,6 +311,7 @@ class CmdInterface(InterfaceApp):
             'g': args['g'] if args['g'] else False,
             'c': args['c'] if args['c'] else False # INTERFACE ADD
                  }
+        print(options, flags)
 
         return options, flags, my_parser
 
@@ -414,7 +415,7 @@ def main(location: str):
     # set paths
     interface_app.set_required_paths(linkage_in_file=linkage_in_file, linkage_out_folder=linkage_out_folder,
                                      node_file=node_file, arc_file=arc_file)
-    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder, check_result_folder=geo_check_folder ) #INTERFACE ADD
+    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder, geo_check_folder=geo_check_folder ) #INTERFACE ADD
 
     # run kernel code
     if not interface_app.check_errors():
