@@ -121,7 +121,7 @@ class GeoChecker:
 
         self.config = config
         self.error = ErrorManager(config)
-        self.summary = SummaryInfo('GeoChecker', self.error, config)
+        self.summary = SummaryInfo('geo_check', self.error, config)
         self.visualizer = Visualizer()
         self.folder_path = None
 
@@ -141,12 +141,6 @@ class GeoChecker:
 
     def get_summary(self):
         return self.summary
-
-    def print_checks(self):
-        checks_str = ''
-        for check in self.checks:
-            checks_str += '     [{}]: {} \n'.format(check.get_name(), check.get_description())
-        return checks_str
     
     def checking_errors(self):
         for check in self.checks:
@@ -215,7 +209,8 @@ class GeoChecker:
             check.plot(self.visualizer)
         
     def run(self):
-        self.summary.set_input_param('checks', self.print_checks())
+        for check in self.checks:
+            self.summary.set_input_param(check.get_name(), check.get_description())
         # Initializing secuence
         self.build_checks()
         # Checking secuence
