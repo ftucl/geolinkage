@@ -22,7 +22,7 @@ def add_grass_to_path():
         sys.path.append(CONFIG_GRASS_PATH + '/etc/python')
         sys.path.append(CONFIG_GRASS_PATH + '/lib')
     else:
-        msg_not_found = "It can be found GRASS (grass78) program. Please add absolute path of python executable and 'python/lib'."
+        msg_not_found = "GRASS program can't be found. Please add absolute path of python executable and 'python/lib'."
         print("[ERROR] {}",format(msg_not_found))
 
     return CONFIG_GRASS_PATH
@@ -311,7 +311,6 @@ class CmdInterface(InterfaceApp):
             'g': args['g'] if args['g'] else False,
             'c': args['c'] if args['c'] else False # INTERFACE ADD
                  }
-        print(options, flags)
 
         return options, flags, my_parser
 
