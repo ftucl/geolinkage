@@ -37,6 +37,14 @@ class SetupStatus:
             'version': '2.3.1',
             'module': 'pyshp'
         },
+        'pandas': {
+            'version': '1.4.0',
+            'module': 'pandas'
+        },
+        'seaborn': {
+            'version': '0.13.2',
+            'module': 'seaborn'
+        },
     }
 
     def __init__(self):
