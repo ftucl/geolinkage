@@ -468,6 +468,9 @@ class InterfaceApp:
                                                 epsg=self.epsg_code, merge_coord_info=True)
                 # save to shapefile
                 # ml.dis.export(linkage_file_path, epsg=int(epsg_code))
+                # from flopy.utils.crs import get_authority_crs
+                # crs_utm = get_authority_crs(f"EPSG:{epsg_code}")
+
                 ml.modelgrid.write_shapefile(filename=linkage_file_path, epsg=self.epsg_code)
 
                 # check if it exists new file
