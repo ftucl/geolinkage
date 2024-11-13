@@ -227,6 +227,7 @@ class InterfaceApp:
         self.catchment_file = None
         self.gw_file = None
         self.ds_folder = None
+        self.geo_check_folder = None
         self.epsg_code = None
         self.catchment_field = None
         self.gw_field = None
@@ -239,6 +240,8 @@ class InterfaceApp:
         self.z_rotation = None
         self.x_ll = None  # real world model coords (lower left)
         self.y_ll = None  # real world model coords (lower left)
+
+        self.geo_checker = None
 
         self.errors = []
 
@@ -267,6 +270,10 @@ class InterfaceApp:
     def print_geo_summary(self):
         pass
 
+    @abstractmethod
+    def print_geo_check_summary(self):
+        pass
+
     def set_gw_model(self, gw_model_file: str):
         self.make_grid = True
 
@@ -289,6 +296,10 @@ class InterfaceApp:
         except AttributeError as e:
             self.errors.append('Groundwater model rotation is empty. Set to [0.0]'.format(z_rotation))
             self.z_rotation = 0.0
+
+    def run_geo_checker(self):
+        if self.geo_check_folder:
+            self.app.run_geo_checker(result_path=self.geo_check_folder)
 
     def set_gw_model_coords_lower_left(self, coords_ll):
         self.make_grid = True
@@ -357,13 +368,14 @@ class InterfaceApp:
             self.errors.append('node file is required') if not node_file else None
             self.errors.append('arc file is required') if not arc_file else None
 
-    def set_additional_paths(self, catchment_file: str, gw_file: str, ds_folder: str):
+    def set_additional_paths(self, catchment_file: str, gw_file: str, ds_folder: str, geo_check_folder: str):
         # set in app
         # self.app.set_catchment_file(file_path=catchment_file, is_main_file=True) if catchment_file else None
         # self.app.set_groundwater_file(file_path=gw_file, is_main_file=True) if gw_file else None
         f_catchment_type = self.app.catchment_processor.get_feature_type()
         f_gw_type = self.app.groundwater_processor.get_feature_type()
         self.app.set_demand_site_folder(folder_path=ds_folder)
+        self.app.set_geo_check_results_folder(folder_path=geo_check_folder)
         self.app.set_feature_file_path(feature_type=f_catchment_type, file_path=catchment_file, is_main_file=True)
         self.app.set_feature_file_path(feature_type=f_gw_type, file_path=gw_file, is_main_file=True)
 
@@ -376,6 +388,7 @@ class InterfaceApp:
             self.catchment_file = catchment_file
             self.gw_file = gw_file
             self.ds_folder = ds_folder
+            self.geo_check_folder = geo_check_folder
 
     def set_epsg_code(self, epsg_code: str):
         try:
@@ -455,6 +468,9 @@ class InterfaceApp:
                                                 epsg=self.epsg_code, merge_coord_info=True)
                 # save to shapefile
                 # ml.dis.export(linkage_file_path, epsg=int(epsg_code))
+                # from flopy.utils.crs import get_authority_crs
+                # crs_utm = get_authority_crs(f"EPSG:{epsg_code}")
+
                 ml.modelgrid.write_shapefile(filename=linkage_file_path, epsg=self.epsg_code)
 
                 # check if it exists new file

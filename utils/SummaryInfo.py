@@ -7,7 +7,7 @@ from utils.Errors import ErrorManager
 
 class SummaryInfo:
     """
-        Clase utilitaria cuyo proposito es mostrar los resultados finales de la ejecucion del nucleo de procesamiento.
+        Clase utilitaria cuyo proposito es mostrar los resultados finales de la ejecucion del núcleo de procesamiento.
         Dividiendo la informacion en: parametros de entrada, estado de las principales tareas en el procesamiento y
         los errores / advertencias que fueron detectadas en la ejecucion.
 

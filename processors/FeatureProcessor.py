@@ -427,7 +427,8 @@ class FeatureProcess(MapFileManagerProtocol, metaclass=ABCMeta):
                 #     self.map_names[map_name]['imported'] = True
 
         # re-projecting map if exists lower left edge
-        if self.x_ll is not None and self.y_ll is not None and self.z_rotation is not None:
+        if self.z_rotation is not None and self.z_rotation != 0:
+            # no longer moving the origin to the lower left corner
             self.set_origin_in_map()
 
         return self.check_errors(types=[self.get_feature_type()]), self.get_errors()
@@ -441,8 +442,8 @@ class FeatureProcess(MapFileManagerProtocol, metaclass=ABCMeta):
                 x_ini_ll, y_ini_ll = UtilMisc.get_origin_from_map(map_name=map_name)
 
                 # set the new origin
-                x_offset_ll = self.x_ll - x_ini_ll
-                y_offset_ll = self.y_ll - y_ini_ll
+                x_offset_ll = 0 # HERE CHANGE OVERLAY OFFSET, prev x_ll - x_ini_ll
+                y_offset_ll = 0 # HERE CHANGE OVERLAY OFFSET, prev y_ll - y_ini_ll
                 map_name_out = '{}_transform'.format(map_name)
                 _err, _errors = GrassCoreAPI.set_origin_in_map(map_name=map_name, map_name_out=map_name_out,
                                                                x_offset_ll=x_offset_ll, y_offset_ll=y_offset_ll,

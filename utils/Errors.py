@@ -27,6 +27,7 @@ class ErrorManager:
         self._errors['ri'] = []  # runoff infiltrations
         self._errors['tl'] = []  # transmission links
 
+
         self._warnings['other'] = []
         self._warnings['rf'] = []  # return flows
         self._warnings['ri'] = []  # runoff infiltrations

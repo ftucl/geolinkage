@@ -155,6 +155,20 @@
 #% required: no
 #%end
 
+#%flag
+#% key: C
+#% description: Run geometry checks in the resulting linkage file.
+#% guisection: GeoCheck
+#% suppress_required: yes
+#%end
+
+#%option G_OPT_M_DIR
+#% key: check_folder
+#% type: string
+#% required: no
+#% description: Path of folder to where the results of the checks will be written.
+#% guisection: GeoCheck
+#%end
 
 #%rules
 #% requires_all: -g, gw_model, linkage_in_folder, linkage_out_folder, node, arc, epsg_code, coords_ll, zrotation
@@ -354,6 +368,10 @@ class GrassInterface(InterfaceApp):
         summary = self.app.get_geo_summary()
         print_summary(summary)
 
+    def print_geo_check_summary(self):
+        summary = self.app.get_geo_check_summary()
+        print_summary(summary)
+
     def print_errors(self):
         if self.errors:
             for err in self.errors:
@@ -382,6 +400,8 @@ class GrassInterface(InterfaceApp):
 
         grass.info('[DS FOLDER]: {}'.format(self.ds_folder))
         grass.info('[DS COLUMN]: {} \n'.format(self.ds_field))
+
+        grass.info('[CHECK RESULT FOLDER]: {}'.format(self.geo_check_folder))
 
     def print_groundwater_model_info(self, gw_model):
         # get groundwater model info
@@ -489,6 +509,7 @@ def main(location: str):
     catchment_field = options['catchment_field']
     gw_field = options['gw_field']
     ds_field = options['ds_field']
+    geo_check_folder = options['check_folder'] #INTERFACE ADD
 
     interface_app.set_feature_fields(catchment_field=catchment_field, gw_field=gw_field,
                                      ds_field=ds_field)  # set fields
@@ -496,14 +517,17 @@ def main(location: str):
     # set paths
     interface_app.set_required_paths(linkage_in_file=linkage_in_file, linkage_out_folder=linkage_out_folder,
                                      node_file=node_file, arc_file=arc_file)
-    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder)
+    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder, geo_check_folder= geo_check_folder) #INTERFACE ADD
 
     # run kernel code
     if not interface_app.check_errors():
-        app_sess = Session()
-        app_sess.open(gisdb="/tmp", location=interface_app.location, create_opts="EPSG:{}".format(interface_app.epsg_code))
+        # app_sess = Session()
+        # app_sess.open(gisdb="/tmp", location=interface_app.location, create_opts="EPSG:{}".format(interface_app.epsg_code))
         atexit.register(cleanup, location=location)
         interface_app.run()
+
+        if flags['C']:
+            interface_app.run_geo_checker()
 
         interface_app.print_input_summary()
         interface_app.print_main_summary()
@@ -512,6 +536,9 @@ def main(location: str):
         interface_app.print_gw_summary()
         interface_app.print_ds_summary()
         interface_app.print_river_summary()
+
+        if flags['C']:
+            interface_app.print_geo_check_summary()
 
         app_sess.close()
 
