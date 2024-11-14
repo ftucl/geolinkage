@@ -8,7 +8,7 @@
 
 - Terminal:
 ```bash
-    python3.12 CmdInterface.py -h
+    python3 CmdInterface.py -h
 ```
 
 ## Examples
