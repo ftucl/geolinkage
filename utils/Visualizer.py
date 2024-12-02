@@ -94,16 +94,16 @@ class Visualizer:
     def write_text_file(self, name, text=None, texts=None, preface=None):
         if not self.result_path:
             raise ValueError('Result path is not set. Please set the result path')
-
-        if preface:
-            with open(self.result_path + '/' + name + '.txt', 'w') as file:
-                file.write(preface + '\n')
-
+            
         if text:
             with open(self.result_path + '/' + name + '.txt', 'w') as file:
+                if preface:
+                    file.write(preface + '\n')
                 file.write(text + '\n')
 
         elif texts:
             with open(self.result_path + '/' + name + '.txt', 'w') as file:
+                if preface:
+                    file.write(preface + '\n')
                 for text in texts:
                     file.write(text + '\n')
