@@ -210,7 +210,8 @@ class SuperpositionCheck(Check):
                                     x_label = self.secondary_feature, y_label = self.base_feature) 
 
         error_list = self.make_error_file_list()
-        visualizer.write_text_file(f"{self.base_feature}_{self.secondary_feature}_error_report", texts=error_list)
+        visualizer.write_text_file(f"{self.base_feature}_{self.secondary_feature}_error_report", texts=error_list,
+                                    preface= f"Reporte de errores en la superposición de elementos {self.base_feature}-{self.secondary_feature} en el archivo de enlace. Un error implica que la superposición no está correspondida por una conexión en WEAP. Las causas más frecuentes son, un enlace faltante que se debe agregar al modelo WEAP, o coordenadas incorrectas proveidas para la esquina inferior izquierda (provea estas coordenadas con la mayor cantidad de decimales posible).")
 
     def arc_init_operation(self, arc_id, arc):
         pass

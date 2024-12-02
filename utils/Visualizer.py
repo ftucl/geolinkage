@@ -91,13 +91,18 @@ class Visualizer:
         plt.clf()  # Clear the figure for the next plot
 
 
-    def write_text_file(self, name, text=None, texts=None):
+    def write_text_file(self, name, text=None, texts=None, preface=None):
         if not self.result_path:
             raise ValueError('Result path is not set. Please set the result path')
 
+        if preface:
+            with open(self.result_path + '/' + name + '.txt', 'w') as file:
+                file.write(preface + '\n')
+
         if text:
             with open(self.result_path + '/' + name + '.txt', 'w') as file:
-                file.write(text)
+                file.write(text + '\n')
+
         elif texts:
             with open(self.result_path + '/' + name + '.txt', 'w') as file:
                 for text in texts:
