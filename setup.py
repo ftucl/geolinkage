@@ -38,7 +38,7 @@ class SetupStatus:
             'module': 'pyshp'
         },
         'pandas': {
-            'version': '1.4.0',
+            'version': '2.2.3',
             'module': 'pandas'
         },
         'seaborn': {
