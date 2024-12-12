@@ -62,6 +62,8 @@ class Check(ABC):
     """
     def __init__(self):
         self.errors = []
+        self.name = None
+        self.description = None
 
     # Space for auxiliary functions
 
@@ -71,7 +73,7 @@ class Check(ABC):
         if feature:
             return feature["data"]
         else: 
-            return None
+            return []
     
     # This one incurs in a mistake when dealing with demand_sites, it only gives you the first demand site name.
     def get_cell_feature_names(self, cell, feature_type):
@@ -123,4 +125,9 @@ class Check(ABC):
     def get_errors(self):
         return self.errors
     
+    def get_name(self):
+        return self.name
+
+    def get_description(self):
+        return self.description
     

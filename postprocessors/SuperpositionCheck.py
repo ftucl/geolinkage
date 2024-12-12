@@ -79,6 +79,9 @@ class SuperpositionCheck(Check):
 
     def __init__(self, base_feature, secondary_feature, config):
         super().__init__()
+        self.name = f"Chequeo superposición {base_feature}-{secondary_feature}"
+        self.description = f"Chequea si la superposición de elementos [{base_feature}-{secondary_feature}] en el archivo de enlace es correspondida por una conexión en el modelo WEAP, con el fin de prevenir perdida de flujo."
+
         self.base_feature = base_feature
         self.secondary_feature = secondary_feature
 
@@ -94,12 +97,12 @@ class SuperpositionCheck(Check):
 
     # Space for auxiliary functions specific to this class.
 
-    def add_error(self, base_element, super_element):
+    def add_error(self, base_element, super_element, area=1):
         if not self.connection_error.get(base_element):
             self.connection_error[base_element] = {}
         if not self.connection_error[base_element].get(super_element):
             self.connection_error[base_element][super_element] = 0
-        self.connection_error[base_element][super_element] += 1
+        self.connection_error[base_element][super_element] += area
 
     def make_errors(self):
         for base, secondaries in self.connection_error.items():
@@ -137,7 +140,7 @@ class SuperpositionCheck(Check):
 
         for error in errors.keys():
             [base, secondary] = error.split('-')
-            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base) + 1)}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary) + 1)}-> {errors[error]['amount_error']} error(es),  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
+            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base) + 1)}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary) + 1)}-> {errors[error]['amount_error']} area de error,  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
             error_list.append(error_txt)
         
         return error_list
@@ -185,12 +188,6 @@ class SuperpositionCheck(Check):
                 matrix[i][j] = magnitud
                 
         return matrix, base_names, secondary_names
-
-    def get_name(self):
-        return f"Chequeo superposición {self.base_feature}-{self.secondary_feature}"
-    
-    def get_description(self):
-        return f"Chequea si la superposición de elementos [{self.base_feature}-{self.secondary_feature}] en el archivo de enlace es correspondida por una conexión en el modelo WEAP, con el fin de prevenir perdida de flujo."
 
     def plot(self, visualizer):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
@@ -243,18 +240,20 @@ class SuperpositionCheck(Check):
         pass
 
     def cell_check_operation(self, cell_id, cell):
-        base_element = self.get_cell_feature_names(cell, self.base_feature)
-        secondary_element = self.get_cell_feature_names(cell, self.secondary_feature)
+        base_element_data = self.get_cell_feature_data(cell, self.base_feature)
+        secondary_element_data = self.get_cell_feature_data(cell, self.secondary_feature)
 
-        for base_name in base_element:
-            self.base_names[base_name] += 1
-            for secondary_name in secondary_element:
-                self.secondary_names[secondary_name] += 1
+        for base in base_element_data:
+            base_name = base['name']
+            self.base_names[base_name] += base['area']
+            for secondary in secondary_element_data:
+                secondary_name = secondary['name']
+                self.secondary_names[secondary_name] += float(secondary['area'])
                 if not self.check_connection(base_name, secondary_name):
-                    self.add_error(base_name, secondary_name)
+                    self.add_error(base_name, secondary_name, base['area'])
                 else:
                     if self.connections.get(base_name):
-                        self.connections[base_name][secondary_name] += 1
+                        self.connections[base_name][secondary_name] += float(secondary['area'])
         
         self.make_errors()
         

@@ -38,7 +38,7 @@ class SetupStatus:
             'module': 'pyshp'
         },
         'pandas': {
-            'version': '1.4.0',
+            'version': '2.2.3',
             'module': 'pandas'
         },
         'seaborn': {
@@ -132,7 +132,7 @@ class SummaryStatus:
             line = {
                 'msg': title,
                 'status': False,  # 'OK', 'NOT FOUND', 'ERROR', 'INSTALLED'
-                'level': 0
+                'level': 0     
             }
 
             self.lines.append(line)
@@ -202,10 +202,10 @@ def import_package(package, summary):
     except ModuleNotFoundError:
         summary.add_process_msg(package=package, msg=msg_search, status='NOT FOUND')
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
+            subprocess.run([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)], check=True)
             summary.add_process_msg(package=package, msg=msg_install, status='INSTALLED')
         except subprocess.CalledProcessError:
-            msg_info = 'Need to be manually installed: pip3 install {}=={}'.format(package, version)
+            msg_info = 'Need to be manually installed: pip install {}=={}'.format(package, version)
             summary.add_process_msg(package=package, msg=msg_install, status='NOT INSTALLED', info=msg_info)
 
 
@@ -216,7 +216,7 @@ def set_ld_library():
 
 def grass_check():
     try:
-        CONFIG_GRASS_PATH = subprocess.run(["grass78", "--config", "path"], shell=True)
+        CONFIG_GRASS_PATH = subprocess.run(["grass", "--config", "path"])
         is_grass = True
     except subprocess.CalledProcessError:
         is_grass = False

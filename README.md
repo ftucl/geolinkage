@@ -1,4 +1,29 @@
 # GeoLinkage
+GeoLinkage is a GRASS GIS plugin that automates the creation of linkage files for WEAP-MODFLOW integrated models.
+
+It receives Shapefile maps containing the information for Catchments, Groundwater and Demand Sites, and overlays them over an empty linkage file provided by the user, or obtained directly from the MODFLOW model with FloPy.
+
+It also receives the WEAP arcs and nodes in Shapefile format, and checks the consistency with the maps.
+
+The newest update added a GeoChecker module, meant to check restrictions over the resulting Linkage file, currently checks if a superposition in one or more cells of Groundwater-Catchment and Groundwater-DemandSite is corresponded by a link in the WEAP model.
+
+For more information about the installation process and use of GeoLinkage checkout the GeoLinkage official Manual.
+
+## Use restrictions
+
+Currently only available for Linux machines.
+
+Not useful for unstructured grid subterranean models (e.g. MODFLOW USG).
+
+## Relevant links
+Showcase video:
+Still not uploaded.
+
+How to Geolinkage video:
+Still not uploaded.
+
+GeoLinkage Manual:
+Still not uploaded.
 
 ## Help
 - Grass Console: (or  *File -> Launch Script*)
