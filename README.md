@@ -17,13 +17,13 @@ Not useful for unstructured grid subterranean models (e.g. MODFLOW USG).
 
 ## Relevant links
 Showcase video:
-Still not uploaded.
+https://drive.google.com/file/d/1NFG1aw8eztr5cJa0EeCr5cNrY01L7ufF/view?usp=drive_link
 
 How to Geolinkage video:
-Still not uploaded.
+https://drive.google.com/file/d/19tRm_ErqrzEwgsBCHQHWXmDADizNNsCh/view?usp=drive_link
 
 GeoLinkage Manual:
-Still not uploaded.
+https://drive.google.com/file/d/19cyfgfXf_MqKMbWbbQTBxmONW3WIANr7/view?usp=drive_link
 
 ## Help
 - Grass Console: (or  *File -> Launch Script*)
