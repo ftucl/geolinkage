@@ -426,7 +426,7 @@ class FeatureProcess(MapFileManagerProtocol, metaclass=ABCMeta):
                 # if not _err:
                 #     self.map_names[map_name]['imported'] = True
 
-        # re-projecting map if exists lower left edge
+        # re-projecting map if exists z_rotation
         if self.z_rotation is not None and self.z_rotation != 0:
             # no longer moving the origin to the lower left corner
             self.set_origin_in_map()
