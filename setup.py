@@ -2,8 +2,9 @@
 
 import sys
 import subprocess
-import pkg_resources
 import importlib
+import importlib.metadata
+import re
 
 
 CONFIG_GRASS_PATH = ''
@@ -12,6 +13,10 @@ CONFIG_GRASS_PATH = ''
 class SetupStatus:
     # Paquetes usados en la aplicacion
     PACKAGES = {
+        'numpy': {
+            'version': '1.26.4',
+            'module': 'numpy'
+        },
         'python-cli-ui': {
             'version': '0.7.5',
             'module': 'ui'
@@ -21,7 +26,7 @@ class SetupStatus:
             'module': 'grass-session'
         },
         'flopy': {
-            'version': '3.3.1',
+            'version': '3.7.0',
             'module': 'flopy'
         },
         'anytree': {
@@ -29,8 +34,16 @@ class SetupStatus:
             'module': 'anytree'
         },
         'pyshp': {
-            'version': '2.1.2',
+            'version': '2.3.1',
             'module': 'pyshp'
+        },
+        'pandas': {
+            'version': '2.2.3',
+            'module': 'pandas'
+        },
+        'seaborn': {
+            'version': '0.13.2',
+            'module': 'seaborn'
         },
     }
 
@@ -72,10 +85,14 @@ class SetupStatus:
 
     def get_missed_packages(self):
         return self.packages_missed
+    
+    def pkg_name_normalize(self, package):
+        pkg = re.sub(r"[-_.]+", "-", package).lower()
+        return pkg
 
     def check_packages(self):
         required = self.PACKAGES.keys()
-        package_installed = {pkg.key for pkg in pkg_resources.working_set}
+        package_installed = {self.pkg_name_normalize(x.name) for x in importlib.metadata.distributions()}
         self.packages_missed = required - package_installed
 
         for package in required:
@@ -115,7 +132,7 @@ class SummaryStatus:
             line = {
                 'msg': title,
                 'status': False,  # 'OK', 'NOT FOUND', 'ERROR', 'INSTALLED'
-                'level': 0
+                'level': 0     
             }
 
             self.lines.append(line)
@@ -185,10 +202,10 @@ def import_package(package, summary):
     except ModuleNotFoundError:
         summary.add_process_msg(package=package, msg=msg_search, status='NOT FOUND')
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)])
+            subprocess.run([sys.executable, "-m", "pip", "install", '{}=={}'.format(package, version)], check=True)
             summary.add_process_msg(package=package, msg=msg_install, status='INSTALLED')
         except subprocess.CalledProcessError:
-            msg_info = 'Need to be manually installed: pip3 install {}=={}'.format(package, version)
+            msg_info = 'Need to be manually installed: pip install {}=={}'.format(package, version)
             summary.add_process_msg(package=package, msg=msg_install, status='NOT INSTALLED', info=msg_info)
 
 
@@ -199,10 +216,11 @@ def set_ld_library():
 
 def grass_check():
     try:
-        CONFIG_GRASS_PATH = subprocess.check_output(["grass78", "--config", "path"]).decode("utf-8").strip()
+        CONFIG_GRASS_PATH = subprocess.run(["grass", "--config", "path"])
         is_grass = True
     except subprocess.CalledProcessError:
         is_grass = False
+
     except FileNotFoundError:
         is_grass = False
 
@@ -212,7 +230,7 @@ def grass_check():
 def pip_check():
     try:
         msg_info = '[*] pip is installed.'
-        subprocess.check_call([sys.executable, "-m", "pip", '-h'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.run([sys.executable, "-m", "pip", '-h'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         is_pip = True
     except subprocess.CalledProcessError:
         is_pip = False
@@ -250,7 +268,6 @@ def setup_app():
     import os
 
     setup_status = SetupStatus()
-
     # Required checks
     # Grass Requirement
     is_grass = grass_check()
@@ -297,7 +314,6 @@ def setup_app():
         packages_missed = setup_status.get_missed_packages()
         for package in packages_missed:
             import_package(package, summary=setup_status)
-
     summary_text = setup_status.get_summary()
     print(summary_text)
 

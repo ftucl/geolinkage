@@ -380,6 +380,7 @@ class DemandSiteProcess(FeatureProcess):
             feature_area = feature_data.area()
 
             # get id from demand site map (Node map) - its geometry id
+            # if it fails here the demand site does not exist in weap
             feature_id = self._demand_site_names[feature_name]
             # feature_id = feature_data.attrs['a_ObjID']
 

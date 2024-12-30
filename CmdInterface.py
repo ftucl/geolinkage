@@ -14,7 +14,7 @@ from utils.SummaryInfo import SummaryInfo
 
 def add_grass_to_path():
     try:
-        CONFIG_GRASS_PATH = subprocess.check_output(["grass78", "--config", "path"]).decode("utf-8").strip()
+        CONFIG_GRASS_PATH = subprocess.run(["grass78", "--config", "path"], shell=True)
     except FileNotFoundError as e:
         CONFIG_GRASS_PATH = None
 
@@ -22,7 +22,7 @@ def add_grass_to_path():
         sys.path.append(CONFIG_GRASS_PATH + '/etc/python')
         sys.path.append(CONFIG_GRASS_PATH + '/lib')
     else:
-        msg_not_found = "It can be found GRASS (grass78) program. Please add absolute path of python executable and 'python/lib'."
+        msg_not_found = "GRASS program can't be found. Please add absolute path of python executable and 'python/lib'."
         print("[ERROR] {}",format(msg_not_found))
 
     return CONFIG_GRASS_PATH
@@ -199,6 +199,10 @@ class CmdInterface(InterfaceApp):
         summary = self.app.get_geo_summary()
         print_summary(summary)
 
+    def print_geo_check_summary(self):
+        summary = self.app.get_geo_check_summary()
+        print_summary(summary)
+
     def print_errors(self):
         if self.errors:
             for err in self.errors:
@@ -225,7 +229,7 @@ class CmdInterface(InterfaceApp):
             p1='[GW FILE]:', p_v1=self.gw_file, p2='[GW COLUMN]:', p_v2=self.gw_field, e=space)
         l8 = '  {p1:>22} {p_v1:<60} {e:^6} {p2:>22} {p_v2:<20}'.format(
             p1='[DS FOLDER]:', p_v1=self.ds_folder, p2='[DS COLUMN]:', p_v2=self.ds_field, e=space)
-
+        # INTERFACE ADD
         lines = f'{l1} \n\r {l2} \n\r {l3} \n\r {l4} \n\r {l5} \n\r {l6} \n\r {l7} \n\r {l8} \n\r'
 
         UtilMisc.show_title(msg_title='INPUT PARAMETERS', title_color=ui.darkred)
@@ -292,6 +296,7 @@ class CmdInterface(InterfaceApp):
 
             'linkage_in': args['linkage_in'][0] if args['linkage_in'] else '',
             'linkage_out_folder': args['linkage_out_folder'][0] if args['linkage_out_folder'] else '',
+            # 'visualization': args['visualization'][0] if args['visualization'] else '', 
             'node': args['node'][0] if args['node'] else '',
             'arc': args['arc'][0] if args['arc'] else '',
             'catchment': args['catchment'][0] if args['catchment'] else '',
@@ -300,8 +305,12 @@ class CmdInterface(InterfaceApp):
             'catchment_field': args['catchment_field'][0] if args['catchment_field'] else 'Catchment',
             'gw_field': args['gw_field'][0] if args['gw_field'] else 'GW',
             'ds_field': args['ds_field'][0] if args['ds_field'] else 'DS',
+            'geo_check_folder': args['geo_check_folder'][0] if args['geo_check_folder'] else ''  # INTERFACE ADD
         }
-        flags = {'g': args['g'] if args['g'] else False}
+        flags = {
+            'g': args['g'] if args['g'] else False,
+            'c': args['c'] if args['c'] else False # INTERFACE ADD
+                 }
 
         return options, flags, my_parser
 
@@ -397,6 +406,7 @@ def main(location: str):
     catchment_field = options['catchment_field']
     gw_field = options['gw_field']
     ds_field = options['ds_field']
+    geo_check_folder = options['geo_check_folder']  # INTERFACE ADD
 
     interface_app.set_feature_fields(catchment_field=catchment_field, gw_field=gw_field,
                                      ds_field=ds_field)  # set fields
@@ -404,7 +414,7 @@ def main(location: str):
     # set paths
     interface_app.set_required_paths(linkage_in_file=linkage_in_file, linkage_out_folder=linkage_out_folder,
                                      node_file=node_file, arc_file=arc_file)
-    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder)
+    interface_app.set_additional_paths(catchment_file=catchment_file, gw_file=gw_file, ds_folder=ds_folder, geo_check_folder=geo_check_folder ) #INTERFACE ADD
 
     # run kernel code
     if not interface_app.check_errors():
@@ -416,6 +426,9 @@ def main(location: str):
             # atexit.register(cleanup, location=location)
             interface_app.run()
 
+            if flags['c']:
+                interface_app.run_geo_checker()
+
             interface_app.print_input_summary()
             interface_app.print_main_summary()
             interface_app.print_geo_summary()
@@ -423,6 +436,9 @@ def main(location: str):
             interface_app.print_gw_summary()
             interface_app.print_ds_summary()
             interface_app.print_river_summary()
+
+            if flags['c']:
+                interface_app.print_geo_check_summary()
     else:
         parser.print_help(sys.stderr)
         # interface_app.print_errors()

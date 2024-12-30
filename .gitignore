@@ -1,0 +1,7 @@
+venv*/
+test.py
+examples/azapa/
+**/__pycache__/
+/imgs/
+/check_results/
+set_env_win.bat

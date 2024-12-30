@@ -1,4 +1,5 @@
 {
+    
     "DEFAULT MAP NAMES": {
         "LINKAGE FINAL MAP": "linkage_final_new",
         "RIVER SEGMENTS MAP": "arc_segments",
@@ -116,7 +117,13 @@
             "check_names_with_geo": "Validando mapas con geometrías de nodos y arcos",
             "check_names_between_maps": "Validando nombres de geometrias entre mapas",
             "get_ds_map_from_node_map": "Generando mapa principal a partir de mapa de nodos",
-            "_read_well_files": "Leyendo el archivo [{well_path}] para identificar los pozos del mapa de Nodos."
+            "_read_well_files": "Leyendo el archivo [{well_path}] para identificar los pozos del mapa de Nodos.",
+            "init_check_arc": "Recorriendo arcos para crear estructura de datos",
+            "init_check_node": "Recorriendo nodos para crear estructura de datos",
+            "init_check_cell": " Recorriendo celdas para crear estructura de datos",
+            "perform_check_arc": "Llevando a cabo chequeos sobre arcos",
+            "perform_check_node": "Llevando a cabo chequeos sobre nodos",
+            "perform_check_cell": "Llevando a cabo chequeos sobre celdas" 
     },
 
     "FEATURE NAMES": {
@@ -125,7 +132,8 @@
         "demand sites": "demand_site",
         "river": "river",
         "geometry": "geo",
-        "main program": "main"
+        "main program": "main",
+        "geometry checker": "geo_check"
     },
 
     "COMMAND INTERFACE": {
@@ -135,6 +143,12 @@
             "help": "Get the input grid shapefile by FloPy",
             "shortcut": "-g",
             "cmd_type": "flag"
+            },
+            "c": {
+                "cmd": "-c",
+                "help": "Execute checks over the linkage result.",
+                "shortcut": "-c",
+                "cmd_type": "flag"
             },
             "epsg_code": {
                 "cmd": "--epsg_code",
@@ -194,7 +208,7 @@
             "catchment": {
                 "cmd": "--catchment",
                 "help": "path of catchment shapefile",
-                "shortcut": "-c",
+                "shortcut": "-C",
                 "cmd_type": "key"
             },
             "gw": {
@@ -207,6 +221,12 @@
                 "cmd": "--ds_folder",
                 "help": "folder of demand site shapefile(s) and wells textfile (.txt)",
                 "shortcut": "-d",
+                "cmd_type": "key"
+            },
+            "geo_check_folder": {
+                "cmd": "--geo_check_folder",
+                "help": "folder to save geometry check results",
+                "shortcut": "-G",
                 "cmd_type": "key"
             },
             "catchment_field": {

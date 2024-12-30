@@ -7,6 +7,8 @@ from utils.Config import ConfigApp
 from processors.DemandSiteProcessor import DemandSiteProcess
 from processors.GeoKernel import GeoKernel
 from processors.GroundwaterProcessor import GroundwaterProcess
+from postprocessors.GeoChecker import GeoChecker
+from postprocessors.SuperpositionCheck import SuperpositionCheck
 from utils.Protocols import MapFileManagerProtocol
 from processors.RiverProcessor import RiverProcess
 from utils.Errors import ErrorManager
@@ -110,8 +112,16 @@ class AppKernel(MapFileManagerProtocol):
         self.groundwater_processor = GroundwaterProcess(geo=self.geo_processor, config=self.config, err=self._err)
         self.demand_site_processor = DemandSiteProcess(geo=self.geo_processor, config=self.config, err=self._err)
         self.river_processor = RiverProcess(geo=self.geo_processor, config=self.config, err=self._err)
-        self.consolidate_cells = None
 
+        self.geo_checker = GeoChecker(checks=
+                        [
+                            SuperpositionCheck(base_feature='groundwater', secondary_feature='catchment', config=self.config),
+                            SuperpositionCheck(base_feature='groundwater', secondary_feature='demand_site', config=self.config)
+                        ]
+            , config= self.config
+            )
+        
+        self.consolidate_cells = None
         self._feature_type = self.config.type_names[self.__class__.__name__]
 
         self.stats = {}
@@ -153,6 +163,9 @@ class AppKernel(MapFileManagerProtocol):
 
     def get_river_summary(self):
         return self.river_processor.get_summary()
+    
+    def get_geo_check_summary(self):
+        return self.geo_checker.get_summary()
 
     def set_demand_site_folder(self, folder_path):
         if not folder_path:
@@ -177,6 +190,25 @@ class AppKernel(MapFileManagerProtocol):
         else:
             # ds folder problem with error code [-17]
             self.append_error(msg=exist_folders[0][1], is_warn=False, code=code_error, typ=self.demand_site_processor.get_feature_type())
+
+        return self.check_errors(code=code_error), self.get_errors(code=code_error)
+    
+    def set_geo_check_results_folder(self, folder_path: str):
+        code_error = ConfigApp.error_codes['check_results_folder']   # code error for output file
+        feature_type = self.config.type_names['GeoCheck']
+
+        if not folder_path:
+            return False, []
+
+        _, exist_folders = UtilMisc.check_paths_exist(folders=[folder_path])
+
+        if exist_folders[0][0]:
+            feature = MapFileManagerProtocol.feature_file_paths[feature_type]
+            feature['results_path'] = {'path': folder_path}  # os.path.join(folder_path, map_name)
+            
+        else:
+            # linkage-out problem with error code
+            self.append_error(typ=feature_type, msg=exist_folders[0][1], is_warn=False, code=code_error)
 
         return self.check_errors(code=code_error), self.get_errors(code=code_error)
 
@@ -224,6 +256,10 @@ class AppKernel(MapFileManagerProtocol):
 
     def get_consolidate_cells(self):
         _err, _errors = False, []
+
+        # the process should be done only once.
+        if self.consolidate_cells:
+            return _err, _errors
 
         alldata = [self.catchment_processor.get_cell_keys(), self.groundwater_processor.get_cell_keys(),
                    self.demand_site_processor.get_cell_keys(), self.river_processor.get_cell_keys()]
@@ -291,12 +327,19 @@ class AppKernel(MapFileManagerProtocol):
 
         return self.check_errors(types=(self.get_feature_type())), self.get_errors()
 
+    def run_geo_checker(self, result_path: str):
+        self.geo_checker.set_result_path(result_path)
+        self.geo_checker.setup(consolidate_cells=self.consolidate_cells, arcs=self.geo_processor.arcs, nodes=self.geo_processor.nodes)
+        self.geo_checker.run()
+
     @TimerSummary.timeit
     # @main_task
     def mark_linkage_active(self, linkage_name: str, save_changes=100):
         # consolidate [catchment_cells], [gw_cells], [river_cells] and [demand_site_cells]
         _, _ = self.get_consolidate_cells()
 
+
+        # DB connection ? 
         linkage_map = VectorTopo(linkage_name)
         linkage_map.open('rw')
 
