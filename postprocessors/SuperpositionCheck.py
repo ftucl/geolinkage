@@ -1,4 +1,5 @@
 from postprocessors.Check import Check
+from utils.Visualizer import Visualizer
 import numpy as np
 
 class SuperpositionCheck(Check):
@@ -97,12 +98,12 @@ class SuperpositionCheck(Check):
 
     # Space for auxiliary functions specific to this class.
 
-    def add_error(self, base_element, super_element, area=1):
+    def add_error(self, base_element, super_element):
         if not self.connection_error.get(base_element):
             self.connection_error[base_element] = {}
         if not self.connection_error[base_element].get(super_element):
             self.connection_error[base_element][super_element] = 0
-        self.connection_error[base_element][super_element] += area
+        self.connection_error[base_element][super_element] += 1
 
     def make_errors(self):
         for base, secondaries in self.connection_error.items():
@@ -121,6 +122,15 @@ class SuperpositionCheck(Check):
         # Solo llega aquí si no existe el elemento base en WEAP.
         return True
     
+    def make_error_dict_for_df(self):
+        error_list = []
+        for base_element, secondary_elements in self.connection_error.items():
+            base_element_cells = self.base_names[base_element]
+            for secondary_element, cells in secondary_elements.items():
+                secondary_element_cells = self.secondary_names[secondary_element]
+                error_list.append({self.base_feature: base_element ,f"{self.base_feature}_total_cells" : base_element_cells, self.secondary_feature: secondary_element, f"{self.secondary_feature}_total_cells" : secondary_element_cells, "compromised_cells": cells})
+        return error_list
+
     def make_error_file_list(self):
         error_list = []
         if not self.connection_error or len(self.connection_error) == 0:
@@ -140,11 +150,10 @@ class SuperpositionCheck(Check):
 
         for error in errors.keys():
             [base, secondary] = error.split('-')
-            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base) + 1)}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary) + 1)}-> {errors[error]['amount_error']} area de error,  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
+            error_txt = f"{self.base_feature}: {base}{" "*(longest_base_name-len(base) + 1)}|-| {self.secondary_feature}: {secondary}{" "*(longest_secondary_name-len(secondary) + 1)}-> {errors[error]['amount_error']} celdas con error,  {errors[error]['percentaje_error_over_primary']*100:.2f}% del {self.base_feature}, {errors[error]['percentaje_error_over_secondary']*100:.2f}% del {self.secondary_feature}."
             error_list.append(error_txt)
         
         return error_list
-
 
     def make_connection_matrix(self):
             if self.base_names == {} or self.secondary_names == {}:
@@ -189,7 +198,7 @@ class SuperpositionCheck(Check):
                 
         return matrix, base_names, secondary_names
 
-    def plot(self, visualizer):
+    def plot(self, visualizer: Visualizer):
         matrix, base_labels, secondary_labels= self.make_connection_matrix()
         visualizer.write_matrix_img(matrix, f"{self.base_feature}_{self.secondary_feature}_connection_matrix", \
                                     color_labels=[ "Connection", "Error", "No Connection"], \
@@ -209,6 +218,9 @@ class SuperpositionCheck(Check):
         error_list = self.make_error_file_list()
         visualizer.write_text_file(f"{self.base_feature}_{self.secondary_feature}_error_report", texts=error_list,
                                     preface= f"Reporte de errores en la superposición de elementos {self.base_feature}-{self.secondary_feature} en el archivo de enlace. Un error implica que la superposición no está correspondida por una conexión en WEAP. Las causas más frecuentes son, un enlace faltante que se debe agregar al modelo WEAP, o coordenadas incorrectas proveidas para la esquina inferior izquierda (provea estas coordenadas con la mayor cantidad de decimales posible).")
+    
+        error_dict_for_df = self.make_error_dict_for_df()
+        visualizer.write_csv_file(f"{self.base_feature}_{self.secondary_feature}_error_report", error_dict_for_df)
 
     def arc_init_operation(self, arc_id, arc):
         pass
@@ -245,15 +257,15 @@ class SuperpositionCheck(Check):
 
         for base in base_element_data:
             base_name = base['name']
-            self.base_names[base_name] += base['area']
+            self.base_names[base_name] += 1
             for secondary in secondary_element_data:
                 secondary_name = secondary['name']
-                self.secondary_names[secondary_name] += float(secondary['area'])
+                self.secondary_names[secondary_name] += 1
                 if not self.check_connection(base_name, secondary_name):
-                    self.add_error(base_name, secondary_name, base['area'])
+                    self.add_error(base_name, secondary_name)
                 else:
                     if self.connections.get(base_name):
-                        self.connections[base_name][secondary_name] += float(secondary['area'])
+                        self.connections[base_name][secondary_name] += 1
         
         self.make_errors()
         
