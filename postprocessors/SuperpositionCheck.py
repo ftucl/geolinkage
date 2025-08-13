@@ -133,8 +133,8 @@ class SuperpositionCheck(Check):
                                     self.secondary_feature: secondary_element,
                                     f"{self.secondary_feature}_area" : secondary_element_area,
                                     "area_error": error_area,
-                                    f"percentage_error_of_{self.base_feature}": (error_area/base_element_area),
-                                    f"percentage_error_of_{self.secondary_feature}": (error_area/secondary_element_area),
+                                    f"percentage_error_of_{self.base_feature}": error_area / base_element_area,
+                                    f"percentage_error_of_{self.secondary_feature}": error_area / secondary_element_area,
                                     })
         return error_list
 

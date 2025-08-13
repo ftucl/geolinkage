@@ -112,4 +112,5 @@ class Visualizer:
     # meaning every dict represents a row in the dataframe
     def write_csv_file(self, name, dict_list):
         df = pd.DataFrame(dict_list)
-        df.to_csv(self.result_path+"/"+name+".csv", sep=",")
+        if not df.empty:
+            df.to_csv(self.result_path+"/"+name+".csv", sep=",")
