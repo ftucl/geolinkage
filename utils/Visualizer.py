@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors 
 import seaborn as sns
+import pandas as pd
 
 class Visualizer:
     def __init__(self):
@@ -106,3 +107,10 @@ class Visualizer:
                     file.write(preface + '\n')
                 for text in texts:
                     file.write(text + '\n')
+    
+    # dict_list is a list of dicts where the "key" is the name of a columns and the "value" is the value for that row
+    # meaning every dict represents a row in the dataframe
+    def write_csv_file(self, name, dict_list):
+        df = pd.DataFrame(dict_list)
+        if not df.empty:
+            df.to_csv(self.result_path+"/"+name+".csv", sep=",")

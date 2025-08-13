@@ -253,9 +253,28 @@ class AppKernel(MapFileManagerProtocol):
                                       map_name=map_name, output_path=output_path)
 
         return _err, _errors
+    
+    def _get_cell_areas(self, linkage_name):
+        from collections import namedtuple
+        areas = dict()
+        linkage_map = VectorTopo(linkage_name)
+        linkage_map.open('r')
+        Cell = namedtuple("Cell", ["row","col"])
+        for cell in linkage_map.viter(vtype='areas'):
+            if cell.cat is None:
+                continue
+            row = cell.attrs["row"]
+            col = cell.attrs["column"]
+            area = cell.area()
+            
+            cell_id = Cell(row,col)
+            areas[cell_id]=area
+        return areas
 
-    def get_consolidate_cells(self):
+    def get_consolidate_cells(self, linkage_name):
         _err, _errors = False, []
+
+        cell_areas = self._get_cell_areas(linkage_name)
 
         # the process should be done only once.
         if self.consolidate_cells:
@@ -271,13 +290,17 @@ class AppKernel(MapFileManagerProtocol):
                 'catchment': None,
                 'groundwater': None,
                 'river': None,
-                'demand_site': None
+                'demand_site': None, 
+                'cell_area': None
             }
+
+            #get cell_area would be useful for geochecker
 
             consolidate_cells[cell]['catchment'] = self.catchment_processor.get_cell_id_data(cell)
             consolidate_cells[cell]['groundwater'] = self.groundwater_processor.get_cell_id_data(cell)
             consolidate_cells[cell]['demand_site'] = self.demand_site_processor.get_cell_id_data(cell)
             consolidate_cells[cell]['river'] = self.river_processor.get_cell_id_data(cell)
+            consolidate_cells[cell]['cell_area'] = cell_areas[cell]
 
         self.consolidate_cells = consolidate_cells
         return _err, _errors
@@ -336,12 +359,12 @@ class AppKernel(MapFileManagerProtocol):
     # @main_task
     def mark_linkage_active(self, linkage_name: str, save_changes=100):
         # consolidate [catchment_cells], [gw_cells], [river_cells] and [demand_site_cells]
-        _, _ = self.get_consolidate_cells()
-
+        _, _ = self.get_consolidate_cells(linkage_name)
 
         # DB connection ? 
         linkage_map = VectorTopo(linkage_name)
         linkage_map.open('rw')
+
 
         for i, cell in enumerate(self.consolidate_cells):
             catchment_data = self.consolidate_cells[cell]['catchment']
@@ -486,7 +509,7 @@ class AppKernel(MapFileManagerProtocol):
         linkage_new_name, linkage_out_folder_path = self.get_linkage_out_file()[0]  # only one file
         arc_name, arc_file_path, _ = self.geo_processor.get_arc_map_names()[0]  # only one file
         node_name, node_file_path, _ = self.geo_processor.get_node_map_names()[0]  # only one file
-
+        
         # import arc and node files
         self.geo_processor.import_maps()
         # re-projecting map if exists lower left edge
